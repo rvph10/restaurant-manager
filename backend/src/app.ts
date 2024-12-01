@@ -1,7 +1,7 @@
 import express, { Express, Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
-import { router } from './routes';
+import { router } from './routes/index.routes';
 import compression from 'compression';
 import { errorHandler, AppError } from './middleware/error.handler';
 import { notFoundHandler } from './middleware/notFound.handler';
