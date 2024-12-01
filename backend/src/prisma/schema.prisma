@@ -1,0 +1,1587 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Restaurant {
+  id        String  @id @default(uuid())
+  name      String
+  legalName String?
+  vatNumber String?
+  email     String
+  phone     String
+  website   String?
+
+  // Address
+  address    String
+  city       String
+  postalCode String
+  country    String
+  latitude   Float?
+  longitude  Float?
+
+  // Business Hours
+  businessHours Json
+  specialHours  Json?
+
+  // Operational Settings
+  currency           String   @default("EUR")
+  timezone           String   @default("Europe/Brussels")
+  defaultLanguage    String   @default("en")
+  supportedLanguages String[] @default(["en"])
+
+  // Service Configuration
+  allowReservations Boolean @default(true)
+  allowDelivery     Boolean @default(true)
+  allowTakeaway     Boolean @default(true)
+  allowPickup       Boolean @default(true)
+  allowDineIn       Boolean @default(true)
+  allowDriveThru    Boolean @default(false)
+
+  // Delivery Settings
+  deliveryRadius        Float?
+  deliveryTimeRadius    Int?
+  minimumOrderAmount    Decimal  @default(0) @db.Decimal(10, 2)
+  deliveryFee           Decimal  @default(0) @db.Decimal(10, 2)
+  freeDeliveryThreshold Decimal? @db.Decimal(10, 2)
+
+  // Table Management
+  totalTables               Int      @default(0)
+  averageSeatingTime        Int      @default(60)
+  maxReservationSize        Int      @default(10)
+  requireReservationDeposit Boolean  @default(false)
+  depositAmount             Decimal? @db.Decimal(10, 2)
+
+  // Order Settings
+  autoAcceptOrders         Boolean @default(false)
+  preparationTimeDefault   Int     @default(20) // in minutes
+  allowSpecialInstructions Boolean @default(true)
+  maxItemsPerOrder         Int?
+
+  // Payment Settings
+  acceptedPaymentMethods PaymentMethod[]
+  defaultTaxRate         Decimal         @default(21) @db.Decimal(5, 2)
+  serviceFeePercentage   Decimal?        @db.Decimal(5, 2)
+
+  // Loyalty Program
+  loyaltyProgramEnabled Boolean @default(false)
+  pointsPerCurrency     Decimal @default(1) @db.Decimal(10, 2)
+  minimumPointsRedeem   Int     @default(100)
+  pointsValueInCurrency Decimal @default(0.01) @db.Decimal(10, 2)
+
+  // Contact Information
+  customerSupportEmail String?
+  customerSupportPhone String?
+  emergencyContact     String?
+
+  // Social Media
+  socialLinks Json? // Store social media links
+
+  // Notification Settings
+  emailNotifications Boolean @default(false)
+  smsNotifications   Boolean @default(false)
+  pushNotifications  Boolean @default(false)
+
+  // System Settings
+  automaticTableAssignment Boolean @default(true)
+  automaticShiftScheduling Boolean @default(false)
+  requireStaffClockIn      Boolean @default(true)
+
+  // Inventory Settings
+  lowStockThreshold  Int     @default(10)
+  autoReorderEnabled Boolean @default(false)
+  inventoryAlerts    Boolean @default(true)
+
+  // Break & Shift Settings
+  defaultShiftDuration Int @default(8)
+  minimumBreakTime     Int @default(30)
+  maxOvertimeHours     Int @default(4)
+
+  // Kitchen Settings
+  coursePacing          Int     @default(15)
+  maxSimultaneousOrders Int     @default(20)
+  requireAllergenyInfo  Boolean @default(true)
+
+  // Brand
+  logo String?
+
+  // System Fields
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("restaurants")
+}
+
+model TaxConfiguration {
+  id           String   @id @default(uuid())
+  restaurantId String
+  name         String
+  rate         Decimal  @db.Decimal(5, 2)
+  description  String?
+  isDefault    Boolean  @default(false)
+  appliesTo    String[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("tax_configurations")
+}
+
+model DeliveryZone {
+  id            String  @id @default(uuid())
+  restaurantId  String
+  name          String
+  minimumOrder  Decimal @db.Decimal(10, 2)
+  deliveryFee   Decimal @db.Decimal(10, 2)
+  estimatedTime Int
+  polygonPoints Json
+  isActive      Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("delivery_zones")
+}
+
+model Customer {
+  id            String            @id @default(uuid())
+  name          String
+  email         String?           @unique
+  phone         String?           @unique
+  password      String?
+  addresses     CustomerAddress[]
+  lastLogin     DateTime?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  totalOrders   Int               @default(0)
+  totalSpent    Decimal           @default(0) @db.Decimal(10, 2)
+  avgOrderValue Decimal           @default(0) @db.Decimal(10, 2)
+  language      String?           @default("en")
+  birthDate     DateTime?
+  notes         String?
+  loyaltyPoints Int               @default(0)
+  preferences   Json?
+  reservations  Reservation[]
+  orders        Order[]           @relation("CustomerOrders")
+  carts         Cart[]
+
+  isVerified           Boolean   @default(false)
+  verificationToken    String?   @unique
+  resetPasswordToken   String?   @unique
+  resetPasswordExpires DateTime?
+
+  @@index([name])
+  @@map("customers")
+}
+
+model Cart {
+  id         String     @id @default(uuid())
+  customerId String
+  items      CartItem[]
+  createdAt  DateTime   @default(now())
+  expiresAt  DateTime?
+  updatedAt  DateTime   @updatedAt
+  customer   Customer   @relation(fields: [customerId], references: [id])
+
+  @@map("carts")
+}
+
+model CartItem {
+  id             String   @id @default(uuid())
+  cartId         String
+  cart           Cart     @relation(fields: [cartId], references: [id])
+  productId      String
+  product        Product  @relation(fields: [productId], references: [id])
+  customizations Json?
+  unitPrice      Decimal  @db.Decimal(10, 2)
+  extraPrice     Decimal  @db.Decimal(10, 2)
+  quantity       Int
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([cartId])
+  @@index([productId])
+  @@map("cart_items")
+}
+
+model CustomerAddress {
+  id            String   @id @default(uuid())
+  customerId    String
+  customer      Customer @relation(fields: [customerId], references: [id])
+  houseNumber   String
+  boxNumber     String?
+  streetName    String
+  address       String
+  city          String
+  postalCode    String
+  country       String
+  latitude      Float?
+  longitude     Float?
+  deliveryNotes String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([customerId])
+  @@map("customer_addresses")
+}
+
+model Employee {
+  id        String         @id @default(uuid())
+  firstName String
+  lastName  String
+  email     String         @unique
+  phone     String         @unique
+  password  String
+  status    EmployeeStatus @default(ACTIVE)
+  birthDate DateTime
+  gender    Gender?
+
+  // Employment Details
+  employmentType EmploymentType @default(FULL_TIME)
+  startDate      DateTime
+  endDate        DateTime?
+  department     Department[]   @default([])
+  hourlyRate     Decimal        @db.Decimal(10, 2)
+  bankAccount    String?
+
+  // Work Schedule
+  maxHoursPerWeek Int       @default(40)
+  unavailableDays Weekday[]
+
+  // Access Control
+  roles     EmployeeRole[]
+  isAdmin   Boolean        @default(false)
+  lastLogin DateTime?
+
+  // Documents & Certifications
+  documents      EmployeeDocument[]
+  certifications Certification[]
+
+  // Performance & Training
+  performanceReviews PerformanceReview[]
+
+  // Work Records
+  shifts   ShiftAssignment[]
+  timeoffs TimeOff[]
+  breaks   Break[]
+
+  // System Fields
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([email])
+  @@index([status])
+  @@index([department])
+  @@map("employees")
+}
+
+model EmployeeDocument {
+  id         String       @id @default(uuid())
+  employeeId String
+  employee   Employee     @relation(fields: [employeeId], references: [id])
+  type       DocumentType
+  name       String
+  url        String
+  expiryDate DateTime?
+  isVerified Boolean      @default(false)
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  @@map("employee_documents")
+}
+
+model Certification {
+  id                String    @id @default(uuid())
+  employeeId        String
+  employee          Employee  @relation(fields: [employeeId], references: [id])
+  name              String
+  issuedBy          String
+  issueDate         DateTime
+  expiryDate        DateTime?
+  certificateNumber String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@map("certifications")
+}
+
+model Role {
+  id            String         @id @default(uuid())
+  name          String
+  description   String?
+  permissions   Json[]
+  employeeRoles EmployeeRole[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@map("roles")
+}
+
+model EmployeeRole {
+  id         String   @id @default(uuid())
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id])
+  roleId     String
+  role       Role     @relation(fields: [roleId], references: [id])
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("employee_roles")
+}
+
+model PerformanceReview {
+  id         String   @id @default(uuid())
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id])
+  reviewerId String
+  reviewDate DateTime
+  rating     Int
+  feedback   String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("performance_reviews")
+}
+
+model TimeOff {
+  id           String        @id @default(uuid())
+  employeeId   String
+  employee     Employee      @relation(fields: [employeeId], references: [id])
+  type         TimeOffType
+  startDate    DateTime
+  endDate      DateTime
+  status       TimeOffStatus @default(PENDING)
+  reason       String?
+  approvedById String?
+  approvedAt   DateTime?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@map("timeoffs")
+}
+
+model Break {
+  id         String    @id @default(uuid())
+  employeeId String
+  employee   Employee  @relation(fields: [employeeId], references: [id])
+  startTime  DateTime
+  endTime    DateTime?
+  duration   Int?
+  type       BreakType
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@map("breaks")
+}
+
+model Shift {
+  id        String      @id @default(uuid())
+  name      String?
+  shiftType ShiftType
+  startTime DateTime
+  endTime   DateTime
+  status    ShiftStatus @default(SCHEDULED)
+
+  // Staffing
+  assignments  ShiftAssignment[]
+  minimumStaff Int               @default(1)
+  maximumStaff Int?
+
+  // Shift Details
+  department Department[]
+  notes      String?
+  isHoliday  Boolean      @default(false)
+
+  // Events/Special
+  isSpecialEvent Boolean @default(false)
+  eventDetails   Json?
+
+  // Tasks & Sections
+  tasks    ShiftTask[]
+  sections ShiftSection[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([startTime, endTime])
+  @@index([status])
+  @@map("shifts")
+}
+
+model ShiftSection {
+  id        String   @id @default(uuid())
+  shiftId   String
+  shift     Shift    @relation(fields: [shiftId], references: [id])
+  sectionId String
+  startTime DateTime
+  endTime   DateTime
+  notes     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([shiftId])
+  @@map("shift_sections")
+}
+
+model ShiftTask {
+  id          String     @id @default(uuid())
+  shiftId     String
+  shift       Shift      @relation(fields: [shiftId], references: [id])
+  name        String
+  description String?
+  status      TaskStatus @default(PENDING)
+  priority    Priority   @default(MEDIUM)
+  startTime   DateTime?
+  endTime     DateTime?
+  completedAt DateTime?
+  notes       String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([shiftId])
+  @@index([status])
+  @@map("shift_tasks")
+}
+
+model ShiftAssignment {
+  id         String   @id @default(uuid())
+  shiftId    String
+  shift      Shift    @relation(fields: [shiftId], references: [id])
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id])
+
+  // Role in this shift
+  position     String
+  department   Department
+  isSupervisor Boolean    @default(false)
+
+  // Timing
+  startTime       DateTime
+  endTime         DateTime
+  actualStartTime DateTime?
+  actualEndTime   DateTime?
+
+  // Status tracking
+  status      AssignmentStatus @default(SCHEDULED)
+  isLate      Boolean          @default(false)
+  lateMinutes Int              @default(0)
+  overtime    Int              @default(0)
+
+  // Break Management
+  scheduledBreaks ScheduledBreak[]
+  actualBreaks    ActualBreak[]
+
+  // Coverage
+  isCovered   Boolean @default(false)
+  coveredById String?
+  coverReason String?
+
+  // Additional Info
+  notes String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([shiftId])
+  @@index([employeeId])
+  @@index([status])
+  @@map("shift_assignments")
+}
+
+// Update related models to reference ShiftAssignment instead of Shift
+model ScheduledBreak {
+  id                String          @id @default(uuid())
+  shiftAssignmentId String
+  shiftAssignment   ShiftAssignment @relation(fields: [shiftAssignmentId], references: [id])
+  startTime         DateTime
+  duration          Int
+  breakType         BreakType
+  isPaid            Boolean         @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([shiftAssignmentId])
+  @@map("scheduled_breaks")
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  timestamp DateTime @default(now())
+  action    String
+  details   Json
+  userId    String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("audit_logs")
+}
+
+model ActualBreak {
+  id                String          @id @default(uuid())
+  shiftAssignmentId String
+  shiftAssignment   ShiftAssignment @relation(fields: [shiftAssignmentId], references: [id])
+  startTime         DateTime
+  endTime           DateTime?
+  duration          Int?
+  breakType         BreakType
+  notes             String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([shiftAssignmentId])
+  @@map("actual_breaks")
+}
+
+// Menu Management
+model Category {
+  id              String           @id @default(uuid())
+  name            String
+  description     String?
+  displayOrder    Int              @default(0)
+  isActive        Boolean          @default(true)
+  parentId        String?
+  parent          Category?        @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children        Category[]       @relation("CategoryHierarchy")
+  productionSteps ProductionStep[] @relation("CategoryToPrepare")
+  products        Product[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  @@map("categories")
+}
+
+model Product {
+  id              String              @id @default(uuid())
+  name            String
+  description     String?
+  price           Decimal             @db.Decimal(10, 2)
+  categoryId      String
+  category        Category            @relation(fields: [categoryId], references: [id])
+  image           String?
+  isAvailable     Boolean             @default(true)
+  preparationTime Int                 @default(15) // in minutes
+  allergens       String[]
+  nutritionalInfo Json?
+  ingredients     ProductIngredient[]
+  cartItems       CartItem[]
+  orderItems      OrderItem[]
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  @@index([categoryId])
+  @@index([isAvailable])
+  @@map("products")
+}
+
+model ProductIngredient {
+  id           String     @id @default(uuid())
+  productId    String
+  product      Product    @relation(fields: [productId], references: [id])
+  ingredientId String
+  ingredient   Ingredient @relation(fields: [ingredientId], references: [id])
+  quantity     Decimal    @db.Decimal(10, 3)
+  unit         String
+  isOptional   Boolean    @default(false)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@map("product_ingredients")
+}
+
+// Inventory Management
+model Ingredient {
+  id            String               @id @default(uuid())
+  name          String               @unique
+  description   String?
+  stock         Decimal              @db.Decimal(10, 3)
+  unit          MeasurementUnit
+  reorderPoint  Decimal              @db.Decimal(10, 3)
+  reorderAmount Decimal              @db.Decimal(10, 3)
+  cost          Decimal              @db.Decimal(10, 2)
+  supplierId    String
+  supplier      Supplier             @relation(fields: [supplierId], references: [id])
+  products      ProductIngredient[]
+  stockLogs     IngredientStockLog[]
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+
+  @@map("ingredients")
+}
+
+model IngredientStockLog {
+  id           String       @id @default(uuid())
+  ingredientId String
+  ingredient   Ingredient   @relation(fields: [ingredientId], references: [id])
+  quantity     Decimal      @db.Decimal(10, 3)
+  type         StockLogType
+  reason       String?
+  performedBy  String
+  createdAt    DateTime     @default(now())
+
+  @@map("ingredient_stock_logs")
+}
+
+model Supplier {
+  id          String       @id @default(uuid())
+  name        String
+  email       String?
+  phone       String
+  address     String?
+  ingredients Ingredient[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@map("suppliers")
+}
+
+model Order {
+  id          String      @id @default(uuid())
+  orderNumber String      @unique
+  customerId  String
+  customer    Customer    @relation("CustomerOrders", fields: [customerId], references: [id])
+  type        OrderType
+  status      OrderStatus @default(PENDING)
+  items       OrderItem[]
+  totalAmount Decimal     @db.Decimal(10, 2)
+  tax         Decimal     @db.Decimal(10, 2)
+  discount    Decimal     @default(0) @db.Decimal(10, 2)
+  deliveryFee Decimal?    @db.Decimal(10, 2)
+  tableId     String?
+  table       Table?      @relation(fields: [tableId], references: [id])
+  notes       String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@index([customerId])
+  @@index([status])
+  @@map("orders")
+}
+
+model OrderItem {
+  id              String          @id @default(uuid())
+  orderId         String
+  order           Order           @relation(fields: [orderId], references: [id])
+  productId       String
+  product         Product         @relation(fields: [productId], references: [id])
+  quantity        Int
+  unitPrice       Decimal         @db.Decimal(10, 2)
+  specialRequests String?
+  status          OrderItemStatus @default(PENDING)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@map("order_items")
+}
+
+// Table Management
+model Table {
+  id           String        @id @default(uuid())
+  number       Int
+  capacity     Int
+  status       TableStatus   @default(AVAILABLE)
+  orders       Order[]
+  reservations Reservation[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@map("tables")
+}
+
+model Reservation {
+  id             String            @id @default(uuid())
+  tableId        String
+  table          Table             @relation(fields: [tableId], references: [id])
+  customerName   String
+  customerEmail  String?
+  customerPhone  String
+  customerId     String
+  customer       Customer          @relation(fields: [customerId], references: [id])
+  date           DateTime
+  numberOfGuests Int
+  status         ReservationStatus @default(CONFIRMED)
+  notes          String?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  @@map("reservations")
+}
+
+model NotificationTemplate {
+  id        String                @id @default(uuid())
+  name      String // e.g., "Order Confirmation", "Reservation Reminder"
+  type      NotificationType
+  channel   NotificationChannel[]
+  subject   String? // For email templates
+  content   String // Can contain placeholders like {{orderNumber}}
+  variables String[] // List of available placeholders
+  isActive  Boolean               @default(true)
+
+  notifications Notification[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@map("notification_templates")
+}
+
+// Notification Records
+model Notification {
+  id            String               @id @default(uuid())
+  templateId    String
+  template      NotificationTemplate @relation(fields: [templateId], references: [id])
+  recipientId   String // Can be customerId or employeeId
+  recipientType RecipientType
+  channel       NotificationChannel
+  content       String // Processed template with variables replaced
+  status        NotificationStatus   @default(PENDING)
+  sentAt        DateTime?
+  readAt        DateTime?
+  errorMessage  String?
+  metadata      Json? // Additional data like deviceId for push notifications
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([recipientId, recipientType])
+  @@index([status])
+  @@map("notifications")
+}
+
+// Staff Announcements
+model Announcement {
+  id          String       @id @default(uuid())
+  title       String
+  content     String
+  priority    Priority     @default(MEDIUM)
+  startDate   DateTime
+  endDate     DateTime?
+  departments Department[]
+  isActive    Boolean      @default(true)
+
+  // Tracking
+  createdById     String // Employee ID who created
+  acknowledgments AnnouncementAcknowledgment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([priority])
+  @@index([startDate, endDate])
+  @@map("announcements")
+}
+
+// Track who has seen announcements
+model AnnouncementAcknowledgment {
+  id             String       @id @default(uuid())
+  announcementId String
+  announcement   Announcement @relation(fields: [announcementId], references: [id])
+  employeeId     String
+  readAt         DateTime     @default(now())
+
+  @@unique([announcementId, employeeId])
+  @@map("announcement_acknowledgments")
+}
+
+// Sales Analytics
+model SalesMetric {
+  id   String   @id @default(uuid())
+  date DateTime // Daily metrics
+
+  // Revenue Metrics
+  totalRevenue  Decimal @db.Decimal(10, 2)
+  totalOrders   Int
+  avgOrderValue Decimal @db.Decimal(10, 2)
+
+  // Order Type Breakdown
+  dineInRevenue   Decimal @db.Decimal(10, 2)
+  takeawayRevenue Decimal @db.Decimal(10, 2)
+  deliveryRevenue Decimal @db.Decimal(10, 2)
+
+  // Payment Metrics
+  cashPayments  Decimal @db.Decimal(10, 2)
+  cardPayments  Decimal @db.Decimal(10, 2)
+  otherPayments Decimal @db.Decimal(10, 2)
+
+  // Time-based Analysis
+  peakHourOrders Json // Hourly order counts
+
+  // Product Performance
+  topProducts Json // Top selling products
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([date])
+  @@map("sales_metrics")
+}
+
+model StaffMetric {
+  id         String   @id @default(uuid())
+  employeeId String
+  date       DateTime
+
+  // Service Metrics
+  ordersHandled  Int @default(0)
+  tablesServed   Int @default(0)
+  avgServiceTime Int @default(0) // in minutes
+
+  // Time Metrics
+  hoursWorked   Decimal @db.Decimal(5, 2)
+  overtimeHours Decimal @db.Decimal(5, 2)
+  breaksTime    Int     @default(0) // in minutes
+
+  // Performance Indicators
+  customerRating Decimal? @db.Decimal(3, 2) // Average rating from customers
+  speedOfService Decimal? @db.Decimal(3, 2)
+  accuracy       Decimal? @db.Decimal(3, 2)
+
+  // Kitchen Staff Specific
+  dishesCompleted    Int?
+  avgPreparationTime Int? // in minutes
+  qualityRating      Decimal? @db.Decimal(3, 2)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([employeeId, date])
+  @@map("staff_metrics")
+}
+
+model CustomerMetric {
+  id   String   @id @default(uuid())
+  date DateTime
+
+  // Customer Behavior
+  newCustomers         Int
+  returningCustomers   Int
+  totalActiveCustomers Int
+
+  // Order Patterns
+  avgOrdersPerCustomer Decimal @db.Decimal(5, 2)
+  avgSpendPerCustomer  Decimal @db.Decimal(10, 2)
+
+  // Loyalty Metrics
+  loyaltyProgramSignups Int
+  pointsIssued          Int
+  pointsRedeemed        Int
+
+  // Engagement Metrics
+  reservationRate  Decimal @db.Decimal(5, 2) // % of customers making reservations
+  cancellationRate Decimal @db.Decimal(5, 2) // % of cancellations
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([date])
+  @@map("customer_metrics")
+}
+
+model InventoryMetric {
+  id   String   @id @default(uuid())
+  date DateTime
+
+  // Stock Metrics
+  totalItems      Int
+  lowStockItems   Int
+  outOfStockItems Int
+
+  // Cost Metrics
+  totalInventoryValue Decimal @db.Decimal(10, 2)
+  inventoryCost       Decimal @db.Decimal(10, 2)
+  wasteValue          Decimal @db.Decimal(10, 2)
+
+  // Usage Metrics
+  topUsedItems Json // Most used ingredients
+  wastageItems Json // Items with highest wastage
+
+  // Supplier Metrics
+  supplierPerformance Json // Delivery times, quality ratings
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([date])
+  @@map("inventory_metrics")
+}
+
+model ReportSchedule {
+  id          String          @id @default(uuid())
+  name        String
+  description String?
+  reportType  ReportType
+  frequency   ReportFrequency
+  recipients  String[] // Array of email addresses
+  lastRun     DateTime?
+  nextRun     DateTime
+  isActive    Boolean         @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("report_schedules")
+}
+
+model Campaign {
+  id          String         @id @default(uuid())
+  name        String
+  description String?
+  startDate   DateTime
+  endDate     DateTime?
+  status      CampaignStatus @default(DRAFT)
+  type        CampaignType
+
+  // Targeting
+  targetAudience TargetAudience[]
+  minSpent       Decimal?         @db.Decimal(10, 2)
+  minOrders      Int?
+
+  // Promotion Details
+  promotions    Promotion[]
+  discountCodes DiscountCode[]
+
+  // Metrics
+  budget      Decimal @db.Decimal(10, 2)
+  totalSpent  Decimal @default(0) @db.Decimal(10, 2)
+  impressions Int     @default(0)
+  clicks      Int     @default(0)
+  conversions Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([startDate, endDate])
+  @@map("campaigns")
+}
+
+// Promotions
+model Promotion {
+  id          String        @id @default(uuid())
+  campaignId  String?
+  campaign    Campaign?     @relation(fields: [campaignId], references: [id])
+  name        String
+  description String?
+  type        PromotionType
+
+  // Timing
+  startDate  DateTime
+  endDate    DateTime?
+  daysOfWeek Weekday[] // Specific days this promotion is valid
+  startTime  String? // Time of day format "HH:mm"
+  endTime    String? // Time of day format "HH:mm"
+
+  // Discount Details
+  discountType   DiscountType
+  discountValue  Decimal      @db.Decimal(10, 2)
+  minOrderAmount Decimal?     @db.Decimal(10, 2)
+  maxDiscount    Decimal?     @db.Decimal(10, 2)
+
+  // Usage Limits
+  usageLimit  Int? // Total number of times this can be used
+  userLimit   Int? // Times each user can use this
+  currentUses Int  @default(0)
+
+  // Applicability
+  applicableItems String[] // Product IDs this applies to
+  excludedItems   String[] // Product IDs this doesn't apply to
+
+  // Status
+  isActive Boolean @default(true)
+
+  discountCodes DiscountCode[]
+  usageHistory  PromotionUsage[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([startDate, endDate])
+  @@map("promotions")
+}
+
+// Discount Codes
+model DiscountCode {
+  id          String    @id @default(uuid())
+  code        String    @unique
+  campaignId  String?
+  campaign    Campaign? @relation(fields: [campaignId], references: [id])
+  promotionId String
+  promotion   Promotion @relation(fields: [promotionId], references: [id])
+
+  isActive  Boolean   @default(true)
+  expiresAt DateTime?
+
+  // Usage
+  maxUses      Int?
+  currentUses  Int              @default(0)
+  usageHistory PromotionUsage[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([code])
+  @@map("discount_codes")
+}
+
+// Happy Hour Settings
+model HappyHour {
+  id          String    @id @default(uuid())
+  name        String
+  description String?
+  daysOfWeek  Weekday[]
+  startTime   String // Time format "HH:mm"
+  endTime     String // Time format "HH:mm"
+
+  // Discount Settings
+  discountType  DiscountType
+  discountValue Decimal           @db.Decimal(10, 2)
+  appliesTo     HappyHourTarget[]
+  excludedItems String[] // Product IDs
+
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("happy_hours")
+}
+
+// Track promotion usage
+model PromotionUsage {
+  id             String        @id @default(uuid())
+  promotionId    String
+  promotion      Promotion     @relation(fields: [promotionId], references: [id])
+  discountCodeId String?
+  discountCode   DiscountCode? @relation(fields: [discountCodeId], references: [id])
+  orderId        String
+  customerId     String
+  discountAmount Decimal       @db.Decimal(10, 2)
+
+  createdAt DateTime @default(now())
+
+  @@index([promotionId])
+  @@index([customerId])
+  @@map("promotion_usage")
+}
+
+model KitchenStation {
+  id          String  @id @default(uuid())
+  name        String // e.g., "Hot Kitchen", "Cold Kitchen", "Grill"
+  description String?
+  isActive    Boolean @default(true)
+
+  // Station Configuration
+  maxCapacity   Int // Maximum concurrent orders
+  currentLoad   Int                      @default(0)
+  assignedStaff KitchenStaffAssignment[]
+
+  // Station Capabilities
+  itemTypes String[] // Types of items this station can prepare
+  equipment String[] // Required equipment at this station
+
+  // Queue Management
+  orderQueues     KitchenQueue[]
+  productionSteps StationStep[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("kitchen_stations")
+}
+
+model KitchenStaffAssignment {
+  id         String         @id @default(uuid())
+  stationId  String
+  station    KitchenStation @relation(fields: [stationId], references: [id])
+  employeeId String
+
+  // Assignment Details
+  startTime DateTime
+  endTime   DateTime?
+  isLeader  Boolean   @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([stationId])
+  @@map("kitchen_staff_assignments")
+}
+
+// Kitchen Queue Management
+model KitchenQueue {
+  id         String             @id @default(uuid())
+  stationId  String
+  station    KitchenStation     @relation(fields: [stationId], references: [id])
+  orderItems KitchenOrderItem[]
+
+  // Queue Status
+  status        QueueStatus @default(ACTIVE)
+  priorityLevel Priority    @default(MEDIUM)
+
+  // Time Tracking
+  estimatedCompletionTime DateTime?
+  actualCompletionTime    DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([stationId])
+  @@map("kitchen_queues")
+}
+
+model KitchenOrderItem {
+  id          String       @id @default(uuid())
+  queueId     String
+  queue       KitchenQueue @relation(fields: [queueId], references: [id])
+  orderItemId String // Reference to original OrderItem
+
+  // Preparation Details
+  status      PreparationStatus @default(QUEUED)
+  startedAt   DateTime?
+  completedAt DateTime?
+  assignedTo  String? // Employee ID
+
+  // Recipe & Instructions
+  recipeVersion       String? // Version of recipe used
+  specialInstructions String?
+  allergenAlert       Boolean @default(false)
+
+  // Quality Control
+  checkedBy     String? // Employee ID who verified
+  qualityIssues String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([queueId])
+  @@index([status])
+  @@map("kitchen_order_items")
+}
+
+// Production Line Definition
+model ProductionLine {
+  id          String  @id @default(uuid())
+  name        String // e.g., "Burger Line", "Pizza Line"
+  description String?
+  isActive    Boolean @default(true)
+
+  // Production Steps Configuration
+  steps ProductionStep[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("production_lines")
+}
+
+// Production Step (represents a stage in production)
+model ProductionStep {
+  id                 String         @id @default(uuid())
+  productionLineId   String
+  productionLine     ProductionLine @relation(fields: [productionLineId], references: [id])
+  name               String
+  stepOrder          Int
+  isParallel         Boolean        @default(false)
+  requireAllComplete Boolean        @default(true)
+  isOptional         Boolean        @default(false)
+  estimatedTime      Int?
+  alertAfter         Int?
+  toPrepare          Category[]     @relation("CategoryToPrepare")
+  // Stations at this step
+  stations           StationStep[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([productionLineId, stepOrder])
+  @@map("production_steps")
+}
+
+// Links Stations to Steps
+model StationStep {
+  id        String         @id @default(uuid())
+  stepId    String
+  step      ProductionStep @relation(fields: [stepId], references: [id])
+  stationId String
+  station   KitchenStation @relation(fields: [stationId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([stepId, stationId])
+  @@map("station_steps")
+}
+
+// Order Progress Tracking
+model OrderProgress {
+  id            String   @id @default(uuid())
+  orderId       String   @unique
+  currentStepId String?
+  startTime     DateTime @default(now())
+
+  // Progress History
+  stepHistory StepProgress[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("order_progress")
+}
+
+// Individual Step Progress
+model StepProgress {
+  id              String        @id @default(uuid())
+  orderProgressId String
+  orderProgress   OrderProgress @relation(fields: [orderProgressId], references: [id])
+  stepId          String
+  stationId       String
+  status          StepStatus    @default(PENDING)
+  assignedTo      String? // Employee ID
+
+  // Timing
+  startTime      DateTime?
+  completionTime DateTime?
+
+  // Quality Control
+  checkedBy    String?
+  qualityNotes String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("step_progress")
+}
+
+enum StepStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  BLOCKED
+  SKIPPED
+  FAILED
+}
+
+enum StockLogType {
+  PURCHASE
+  USAGE
+  ADJUSTMENT
+  WASTE
+  RETURN
+}
+
+enum OrderType {
+  DINE_IN
+  TAKEAWAY
+  DELIVERY
+  DRIVE_THRU
+}
+
+enum QueueStatus {
+  ACTIVE
+  PAUSED
+  COMPLETED
+  CANCELLED
+}
+
+enum PreparationStatus {
+  QUEUED
+  IN_PROGRESS
+  WAITING_CHECK
+  COMPLETED
+  CANCELLED
+  ON_HOLD
+}
+
+enum RecipeComplexity {
+  SIMPLE
+  MEDIUM
+  COMPLEX
+  EXPERT
+}
+
+enum CampaignStatus {
+  DRAFT
+  SCHEDULED
+  ACTIVE
+  PAUSED
+  COMPLETED
+  CANCELLED
+}
+
+enum CampaignType {
+  EMAIL
+  SMS
+  PUSH_NOTIFICATION
+  SOCIAL_MEDIA
+  IN_APP
+  PRINT
+}
+
+enum TargetAudience {
+  ALL_CUSTOMERS
+  NEW_CUSTOMERS
+  RETURNING_CUSTOMERS
+  VIP_CUSTOMERS
+  INACTIVE_CUSTOMERS
+  BIRTHDAY_SPECIAL
+}
+
+enum PromotionType {
+  DISCOUNT
+  BOGO
+  BUNDLE
+  HAPPY_HOUR
+  FLASH_SALE
+  LOYALTY_REWARD
+}
+
+enum DiscountType {
+  PERCENTAGE
+  FIXED_AMOUNT
+  FREE_ITEM
+  FREE_DELIVERY
+}
+
+enum HappyHourTarget {
+  ALL_ITEMS
+  BEVERAGES
+  FOOD
+  DESSERTS
+  SPECIFIC_ITEMS
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PREPARING
+  READY
+  DELIVERED
+  COMPLETED
+  CANCELLED
+}
+
+enum OrderItemStatus {
+  PENDING
+  PREPARING
+  READY
+  SERVED
+  CANCELLED
+}
+
+enum TableStatus {
+  AVAILABLE
+  OCCUPIED
+  RESERVED
+  CLEANING
+}
+
+enum ReservationStatus {
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+  NO_SHOW
+}
+
+enum ShiftType {
+  MORNING
+  AFTERNOON
+  EVENING
+  NIGHT
+  SPECIAL_EVENT
+}
+
+enum AssignmentStatus {
+  SCHEDULED
+  CONFIRMED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+enum ShiftStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+enum BreakType {
+  LUNCH
+  DINNER
+  REST
+  COFFEE
+  CIGARETTE
+  OTHER
+}
+
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum EmployeeStatus {
+  ACTIVE
+  INACTIVE
+  ON_LEAVE
+  TERMINATED
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+  PREFER_NOT_TO_SAY
+}
+
+enum EmploymentType {
+  FULL_TIME
+  PART_TIME
+  TEMPORARY
+  SEASONAL
+  INTERN
+  STUDENT
+}
+
+enum Department {
+  KITCHEN
+  SERVICE
+  BAR
+  DELIVERY
+  MANAGEMENT
+  CLEANING
+  SECURITY
+  MAINTENANCE
+  OTHER
+}
+
+enum DocumentType {
+  ID_CARD
+  WORK_PERMIT
+  FOOD_SAFETY_CERT
+  CONTRACT
+  INSURANCE
+  TAX_FORM
+  OTHER
+}
+
+enum TimeOffType {
+  VACATION
+  SICK_LEAVE
+  PERSONAL
+  UNPAID
+  PARENTAL
+  OTHER
+}
+
+enum TimeOffStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  BANK_TRANSFER
+  PAYPAL
+  STRIPE
+  APPLE_PAY
+  GOOGLE_PAY
+  BITCOIN
+  OTHER
+}
+
+enum ReportType {
+  SALES
+  STAFF_PERFORMANCE
+  TABLE_UTILIZATION
+  INVENTORY
+  CUSTOMER_ANALYTICS
+  FINANCIAL
+  OPERATIONAL
+}
+
+enum ReportFrequency {
+  DAILY
+  WEEKLY
+  MONTHLY
+  QUARTERLY
+  YEARLY
+}
+
+enum Weekday {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+  SUNDAY
+}
+
+enum NotificationType {
+  ORDER_STATUS
+  RESERVATION_REMINDER
+  DELIVERY_UPDATE
+  PAYMENT_CONFIRMATION
+  STAFF_SCHEDULE
+  INVENTORY_ALERT
+  CUSTOMER_SUPPORT
+  MARKETING
+  SYSTEM_ALERT
+}
+
+enum NotificationChannel {
+  EMAIL
+  SMS
+  PUSH
+  IN_APP
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  FAILED
+  DELIVERED
+  READ
+}
+
+enum RecipientType {
+  CUSTOMER
+  EMPLOYEE
+}
+
+enum MeasurementUnit {
+  GRAM
+  KILOGRAM
+  MILLILITER
+  LITER
+  PIECE
+  TEASPOON
+  TABLESPOON
+  CUP
+  OUNCE
+  POUND
+  CAN
+}

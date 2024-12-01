@@ -23,6 +23,7 @@ find $DIR \( \
   -path "*/docker/*" \
   \) \
   ! -path "*/node_modules/*" \
+  ! -path "*/migrations/*" \
   ! -path "*/.next/*" \
   ! -path "*/build/*" \
   ! -path "*/dist/*" \
@@ -35,6 +36,7 @@ find $DIR \( \
   ! -name "*.min.*" \
   ! -name "*.md" \
   ! -name "*.json" \
+  ! -name "*.prisma" \
   -type f \
   -exec bash -c 'process_file "$0"' {} \;
 

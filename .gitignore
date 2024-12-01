@@ -34,3 +34,5 @@ prisma/migrations/
 
 # Docker
 docker-compose.override.yml
+
+allfile.txt

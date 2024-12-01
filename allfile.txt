@@ -1,7 +1,100 @@
+=== File: /home/rvph/restaurant-manager/frontend/next.config.js ===
+
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  output: 'standalone',
+};
+
+module.exports = nextConfig;
+
+=== End of /home/rvph/restaurant-manager/frontend/next.config.js ===
+
+
 === File: /home/rvph/restaurant-manager/frontend/.env.example ===
 
 NEXT_PUBLIC_API_URL=http://localhost:5000
 === End of /home/rvph/restaurant-manager/frontend/.env.example ===
+
+
+=== File: /home/rvph/restaurant-manager/frontend/.npmrc ===
+
+legacy-peer-deps=true
+=== End of /home/rvph/restaurant-manager/frontend/.npmrc ===
+
+
+=== File: /home/rvph/restaurant-manager/frontend/postcss.config.js ===
+
+module.exports = {
+  plugins: {
+    tailwindcss: {},
+    autoprefixer: {},
+  },
+};
+
+=== End of /home/rvph/restaurant-manager/frontend/postcss.config.js ===
+
+
+=== File: /home/rvph/restaurant-manager/frontend/src/app/page.tsx ===
+
+export default function Home() {
+  return (
+    <main className="min-h-screen p-8">
+      <h1 className="text-3xl font-bold">Restaurant Management System</h1>
+      <p className="mt-4">Welcome to the restaurant management system</p>
+    </main>
+  );
+}
+
+=== End of /home/rvph/restaurant-manager/frontend/src/app/page.tsx ===
+
+
+=== File: /home/rvph/restaurant-manager/frontend/src/app/globals.css ===
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+=== End of /home/rvph/restaurant-manager/frontend/src/app/globals.css ===
+
+
+=== File: /home/rvph/restaurant-manager/frontend/src/app/layout.tsx ===
+
+import type { Metadata } from 'next';
+import './globals.css';
+
+export const metadata: Metadata = {
+  title: 'Restaurant Management',
+  description: 'Restaurant Management System',
+};
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en">
+      <body>{children}</body>
+    </html>
+  );
+}
+
+=== End of /home/rvph/restaurant-manager/frontend/src/app/layout.tsx ===
+
+
+=== File: /home/rvph/restaurant-manager/frontend/tailwind.config.ts ===
+
+import type { Config } from 'tailwindcss';
+
+const config: Config = {
+  content: [
+    './src/pages/**/*.{js,ts,jsx,tsx,mdx}',
+    './src/components/**/*.{js,ts,jsx,tsx,mdx}',
+    './src/app/**/*.{js,ts,jsx,tsx,mdx}',
+  ],
+  theme: {
+    extend: {},
+  },
+  plugins: [],
+};
+export default config;
+
+=== End of /home/rvph/restaurant-manager/frontend/tailwind.config.ts ===
 
 
 === File: /home/rvph/restaurant-manager/backend/.env.example ===
@@ -13,7 +106,23 @@ REDIS_URL=redis://redis:6379
 JWT_SECRET=your-super-secret-key-change-this
 JWT_EXPIRES_IN=7d
 CORS_ORIGIN=http://localhost:3000
+SESSION_SECRET=your-session-secret-key-change-this
+SENTRY_DSN=your-sentry-dsn
 === End of /home/rvph/restaurant-manager/backend/.env.example ===
+
+
+=== File: /home/rvph/restaurant-manager/backend/.env ===
+
+NODE_ENV=development
+PORT=5000
+DATABASE_URL=postgresql://postgres:postgres@postgres:5432/restaurant_db
+REDIS_URL=redis://redis:6379
+JWT_SECRET=your-super-secret-key-change-this
+JWT_EXPIRES_IN=7d
+CORS_ORIGIN=http://localhost:3000
+SESSION_SECRET=your-session-secret-key-change-this
+SENTRY_DSN=your-sentry-dsn
+=== End of /home/rvph/restaurant-manager/backend/.env ===
 
 
 === File: /home/rvph/restaurant-manager/backend/wait-for-it.sh ===
@@ -31,10 +140,500 @@ exec "$@"
 === End of /home/rvph/restaurant-manager/backend/wait-for-it.sh ===
 
 
-=== File: /home/rvph/restaurant-manager/backend/prisma/schema.prisma ===
+=== File: /home/rvph/restaurant-manager/backend/src/routes/index.ts ===
+
+import { Router } from 'express';
+
+const router = Router();
+
+router.get('/hello', (req, res) => {
+  res.json({ message: 'Hello World!' });
+});
+
+export { router };
+=== End of /home/rvph/restaurant-manager/backend/src/routes/index.ts ===
 
 
-=== End of /home/rvph/restaurant-manager/backend/prisma/schema.prisma ===
+=== File: /home/rvph/restaurant-manager/backend/src/middleware/error.handler.ts ===
+
+import { Request, Response, NextFunction } from 'express';
+import { logger } from '../lib/logging/logger';
+
+export class AppError extends Error {
+  constructor(
+    public statusCode: number,
+    public message: string,
+    public isOperational = true
+  ) {
+    super(message);
+    Object.setPrototypeOf(this, AppError.prototype);
+  }
+}
+
+export const errorHandler = (
+  err: Error | AppError,
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  if (err instanceof AppError) {
+    logger.warn(`Operational error: ${err.message}`, {
+      statusCode: err.statusCode,
+      path: req.path,
+    });
+    return res.status(err.statusCode).json({
+      status: 'error',
+      message: err.message,
+    });
+  }
+
+  // Unexpected errors
+  logger.error('Unexpected error:', err);
+  return res.status(500).json({
+    status: 'error',
+    message: 'Internal server error',
+  });
+};
+=== End of /home/rvph/restaurant-manager/backend/src/middleware/error.handler.ts ===
+
+
+=== File: /home/rvph/restaurant-manager/backend/src/middleware/request.logger.ts ===
+
+import { Request, Response, NextFunction } from 'express';
+import { logger } from '../lib/logging/logger';
+
+export const requestLogger = (req: Request, res: Response, next: NextFunction) => {
+  const start = Date.now();
+
+  res.on('finish', () => {
+    const duration = Date.now() - start;
+    logger.info(`${req.method} ${req.path}`, {
+      duration: `${duration}ms`,
+      status: res.statusCode,
+      ip: req.ip,
+    });
+  });
+
+  next();
+};
+=== End of /home/rvph/restaurant-manager/backend/src/middleware/request.logger.ts ===
+
+
+=== File: /home/rvph/restaurant-manager/backend/src/middleware/notFound.handler.ts ===
+
+import { Request, Response } from 'express';
+
+export const notFoundHandler = (req: Request, res: Response) => {
+  res.status(404).json({
+    status: 'error',
+    message: `Cannot ${req.method} ${req.path}`,
+  });
+};
+=== End of /home/rvph/restaurant-manager/backend/src/middleware/notFound.handler.ts ===
+
+
+=== File: /home/rvph/restaurant-manager/backend/src/index.ts ===
+
+import { config } from 'dotenv';
+import { createApp } from './app';
+import { prisma } from './prisma/client';
+import { logger } from './lib/logging/logger';
+import http from 'http';
+
+// Load environment variables
+config();
+
+const port = process.env.PORT || 5000;
+
+const cleanup = async () => {
+  try {
+    await prisma.$disconnect();
+    logger.info('Cleaned up database and Redis connections');
+  } catch (error) {
+    logger.error('Error during cleanup:', error);
+  }
+};
+
+const handleShutdown = async (server: any) => {
+  logger.info('Shutdown signal received');
+
+  server.close(async () => {
+    logger.info('HTTP server closed');
+    await cleanup();
+    process.exit(0);
+  });
+
+  setTimeout(() => {
+    logger.error('Forced shutdown after 30s timeout');
+    process.exit(1);
+  }, 30000);
+};
+
+
+async function bootstrap() {
+  try {
+    // Test database connection
+    await prisma.$connect();
+    logger.info('Successfully connected to database');
+
+    const app = createApp();
+    const server = http.createServer(app);
+
+    app.listen(port, () => {
+      logger.info(`Server is running on port ${port}`);
+      logger.info(`Environment: ${process.env.NODE_ENV}`);
+    });
+
+    process.on('SIGTERM', () => handleShutdown(server));
+    process.on('SIGINT', () => handleShutdown(server));
+
+  } catch (error) {
+    logger.error('Unable to start server:', error);
+    await prisma.$disconnect();
+    process.exit(1);
+  }
+}
+
+bootstrap().catch((error) => {
+  logger.error('Unhandled error:', error);
+  process.exit(1);
+});
+=== End of /home/rvph/restaurant-manager/backend/src/index.ts ===
+
+
+=== File: /home/rvph/restaurant-manager/backend/src/prisma/client.ts ===
+
+import { PrismaClient } from '@prisma/client';
+
+declare global {
+  // This prevents multiple instances of Prisma Client in development
+  var prisma: PrismaClient | undefined;
+}
+
+export const prisma =
+  global.prisma ||
+  new PrismaClient({
+    log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
+  });
+
+if (process.env.NODE_ENV !== 'production') {
+  global.prisma = prisma;
+}
+
+=== End of /home/rvph/restaurant-manager/backend/src/prisma/client.ts ===
+
+
+=== File: /home/rvph/restaurant-manager/backend/src/app.ts ===
+
+import express, { Express, Request, Response, NextFunction } from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import { router } from './routes';
+import compression from 'compression';
+import { errorHandler, AppError } from './middleware/error.handler';
+import { notFoundHandler } from './middleware/notFound.handler';
+import { requestLogger } from './middleware/request.logger';
+
+export const createApp = (): Express => {
+  const app = express();
+
+  // Global Middlewares
+  app.use(cors({
+    origin: process.env.CORS_ORIGIN,
+    credentials: true,
+  }));
+  app.use(helmet());
+  app.use(compression());
+  app.use(express.json());
+  app.use(express.urlencoded({ extended: true }));
+  app.use(requestLogger);
+
+  // Health Check
+  app.get('/health', (req, res) => {
+    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  });
+
+  // API Routes
+  app.use('/api', router);
+
+  // Error Handling
+  app.use(notFoundHandler);
+  app.use((err: Error | AppError, req: Request, res: Response, next: NextFunction) => {
+    errorHandler(err, req, res, next);
+  });
+
+  return app;
+};
+=== End of /home/rvph/restaurant-manager/backend/src/app.ts ===
+
+
+=== File: /home/rvph/restaurant-manager/backend/src/lib/logging/logger.ts ===
+
+import { createLogger, format, transports } from 'winston';
+import { v4 as uuid } from 'uuid';
+import { prisma } from '../../prisma/client';
+
+const { combine, timestamp, printf, colorize, errors } = format;
+
+// Define log levels
+const levels = {
+  error: 0,
+  warn: 1,
+  info: 2,
+  http: 3,
+  debug: 4,
+};
+
+// Define log colors
+const colors = {
+  error: 'red',
+  warn: 'yellow',
+  info: 'green',
+  http: 'magenta',
+  debug: 'white',
+};
+
+// Custom format for log messages
+const logFormat = printf(({ level, message, timestamp, correlationId, ...metadata }) => {
+  let meta = '';
+  if (Object.keys(metadata).length) {
+    meta = '\n' + JSON.stringify(metadata, null, 2);
+  }
+  const correlationStr = correlationId ? ` [${correlationId}]` : '';
+  return `${timestamp} [${level}]${correlationStr}: ${message}${meta}`;
+});
+
+// Define which logging level to use based on environment
+const level = () => {
+  const env = process.env.NODE_ENV || 'development';
+  return env === 'development' ? 'debug' : 'info';
+};
+
+// Create the logger instance
+export const logger = createLogger({
+  level: level(),
+  levels,
+  format: combine(
+    errors({ stack: true }),
+    timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+    colorize({ all: true }),
+    logFormat
+  ),
+  transports: [
+    // Console transport
+    new transports.Console(),
+    
+    // Error log file transport
+    new transports.File({
+      filename: 'logs/error.log',
+      level: 'error',
+      maxsize: 5242880, // 5MB
+      maxFiles: 5,
+    }),
+    
+    // Combined log file transport
+    new transports.File({
+      filename: 'logs/combined.log',
+      maxsize: 5242880,
+      maxFiles: 5,
+    }),
+  ],
+});
+
+// Add colors to Winston
+format.colorize().addColors(colors);
+
+// Error logging utility
+export const logError = (error: Error, context: Record<string, any>) => {
+  const correlationId = uuid();
+  logger.error({
+    correlationId,
+    message: error.message,
+    stack: error.stack,
+    ...context,
+  });
+  return correlationId;
+};
+
+// Audit logging utility
+export const auditLog = async (action: string, details: any, userId?: string) => {
+  const correlationId = uuid();
+  try {
+    const auditDetails = {
+      ...details,
+      correlationId,
+      timestamp: new Date(),
+    };
+
+    await prisma.auditLog.create({
+      data: {
+        action,
+        details: auditDetails,
+        userId,
+        timestamp: new Date(),
+      },
+    });
+
+    logger.info(`Audit log created: ${action}`, {
+      correlationId,
+      userId,
+      action,
+    });
+
+    return correlationId;
+  } catch (error) {
+    logger.error('Failed to create audit log:', {
+      error,
+      action,
+      details,
+      userId,
+      correlationId,
+    });
+    throw error;
+  }
+};
+
+// Type definitions for the logger
+export type LogLevel = keyof typeof levels;
+
+// Helper functions for consistent logging
+export const logMessage = {
+  info: (message: string, meta?: Record<string, any>) => {
+    logger.info(message, meta);
+  },
+  error: (message: string, error: Error, meta?: Record<string, any>) => {
+    return logError(error, { message, ...meta });
+  },
+  warn: (message: string, meta?: Record<string, any>) => {
+    logger.warn(message, meta);
+  },
+  debug: (message: string, meta?: Record<string, any>) => {
+    logger.debug(message, meta);
+  },
+  http: (message: string, meta?: Record<string, any>) => {
+    logger.http(message, meta);
+  },
+};
+=== End of /home/rvph/restaurant-manager/backend/src/lib/logging/logger.ts ===
+
+
+=== File: /home/rvph/restaurant-manager/backend/src/config/redis.ts ===
+
+import { createClient } from 'redis';
+import { logger } from '../lib/logging/logger';
+
+const redisClient = createClient({
+  url: process.env.REDIS_URL || 'redis://localhost:6379',
+});
+
+redisClient.on('error', (err) => logger.error('Redis Client Error', err));
+redisClient.on('connect', () => logger.info('Redis Client Connected'));
+
+export { redisClient };
+=== End of /home/rvph/restaurant-manager/backend/src/config/redis.ts ===
+
+
+=== File: /home/rvph/restaurant-manager/backend/src/config/socket.ts ===
+
+import { Server } from 'socket.io';
+import { Server as HttpServer } from 'http';
+import { config } from './index';
+
+export const configureSocket = (server: HttpServer) => {
+  const io = new Server(server, {
+    cors: {
+      origin: config.cors.origin,
+      credentials: true,
+    },
+    connectionStateRecovery: {
+      maxDisconnectionDuration: 2 * 60 * 1000,
+    },
+  });
+
+  io.on('connection', (socket) => {
+    console.log('Client connected:', socket.id);
+
+    socket.on('disconnect', () => {
+      console.log('Client disconnected:', socket.id);
+    });
+  });
+
+  return io;
+};
+=== End of /home/rvph/restaurant-manager/backend/src/config/socket.ts ===
+
+
+=== File: /home/rvph/restaurant-manager/backend/src/config/sentry.ts ===
+
+import * as Sentry from '@sentry/node';
+import { nodeProfilingIntegration } from '@sentry/profiling-node';
+import { config } from './index';
+
+export const configureSentry = () => {
+  if (process.env.SENTRY_DSN) {
+    Sentry.init({
+      dsn: process.env.SENTRY_DSN,
+      environment: config.env,
+      integrations: [
+        nodeProfilingIntegration(),
+      ],
+      tracesSampleRate: config.env === 'production' ? 0.1 : 1.0,
+      profilesSampleRate: 1.0,
+    });
+  }
+};
+=== End of /home/rvph/restaurant-manager/backend/src/config/sentry.ts ===
+
+
+=== File: /home/rvph/restaurant-manager/backend/src/config/index.ts ===
+
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+export const config = {
+  env: process.env.NODE_ENV || 'development',
+  port: parseInt(process.env.PORT || '5000', 10),
+  
+  database: {
+    url: process.env.DATABASE_URL,
+  },
+  
+  cors: {
+    origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+    credentials: true,
+  },
+  
+  jwt: {
+    secret: process.env.JWT_SECRET || 'your-super-secret-key-change-this',
+    expiresIn: process.env.JWT_EXPIRES_IN || '7d',
+  }
+};
+=== End of /home/rvph/restaurant-manager/backend/src/config/index.ts ===
+
+
+=== File: /home/rvph/restaurant-manager/backend/src/config/session.ts ===
+
+import session from 'express-session';
+import RedisStore from 'connect-redis';
+import { redisClient } from './redis';
+
+export const sessionConfig = {
+  store: new RedisStore({ 
+    client: redisClient,
+    prefix: 'session:',
+  }),
+  secret: process.env.SESSION_SECRET || 'your-secret-key',
+  resave: false,
+  saveUninitialized: false,
+  name: 'sessionId',
+  cookie: {
+    secure: process.env.NODE_ENV === 'production',
+    httpOnly: true,
+    maxAge: 24 * 60 * 60 * 1000, // 24 hours
+  },
+};
+=== End of /home/rvph/restaurant-manager/backend/src/config/session.ts ===
 
 
 === File: /home/rvph/restaurant-manager/docker/backend.Dockerfile ===
@@ -56,7 +655,7 @@ RUN npm install --legacy-peer-deps
 COPY . .
 
 # Generate Prisma Client
-RUN npx prisma generate
+RUN npx prisma generate --schema=./src/prisma/schema.prisma
 
 # Make wait-for-it.sh executable
 COPY wait-for-it.sh /wait-for-it.sh
@@ -101,6 +700,7 @@ services:
     volumes:
       - ./frontend:/app
       - /app/node_modules
+      - /app/.next
     environment:
       - NEXT_PUBLIC_API_URL=http://localhost:5000
       - NODE_ENV=development
@@ -108,6 +708,7 @@ services:
       - backend
     networks:
       - app-network
+    restart: unless-stopped
 
   backend:
     build:
@@ -134,6 +735,7 @@ services:
         condition: service_healthy
     networks:
       - app-network
+    restart: unless-stopped
 
   postgres:
     image: postgres:15-alpine
@@ -152,6 +754,7 @@ services:
       retries: 5
     networks:
       - app-network
+    restart: unless-stopped
 
   redis:
     image: redis:7-alpine
@@ -166,6 +769,7 @@ services:
       retries: 5
     networks:
       - app-network
+    restart: unless-stopped
 
 networks:
   app-network:
@@ -184,11 +788,11 @@ volumes:
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "client": "cd client && npm start",
-    "server": "cd server && npm start",
-    "dev": "concurrently \"npm run server\" \"npm run client\"",
-    "format": "prettier --write \"**/*.{js,jsx,ts,tsx,json,md}\"",
-    "format:check": "prettier --check \"**/*.{js,jsx,ts,tsx,json,md}\""
+    "frontend": "cd frontend && npm run dev",
+    "backend": "cd backend && npm run dev",
+    "dev": "concurrently \"npm run backend\" \"npm run frontend\"",
+    "format": "prettier --write \"**/*.{js,jsx,ts,tsx,json,md,prisma}\"",
+    "format:check": "prettier --check \"**/*.{js,jsx,ts,tsx,json,md,prisma}\""
   },
   "keywords": [],
   "author": "",
@@ -197,9 +801,11 @@ volumes:
   "dependencies": {
     "concurrently": "^9.1.0",
     "prettier": "^3.4.1"
+  },
+  "devDependencies": {
+    "prettier-plugin-prisma": "^5.0.0"
   }
 }
-
 === End of /home/rvph/restaurant-manager/package.json ===
 
 

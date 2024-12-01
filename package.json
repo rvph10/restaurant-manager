@@ -3,11 +3,11 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "client": "cd client && npm start",
-    "server": "cd server && npm start",
-    "dev": "concurrently \"npm run server\" \"npm run client\"",
-    "format": "prettier --write \"**/*.{js,jsx,ts,tsx,json,md}\"",
-    "format:check": "prettier --check \"**/*.{js,jsx,ts,tsx,json,md}\""
+    "frontend": "cd frontend && npm run dev",
+    "backend": "cd backend && npm run dev",
+    "dev": "concurrently \"npm run backend\" \"npm run frontend\"",
+    "format": "prettier --write \"**/*.{js,jsx,ts,tsx,json,md,prisma}\"",
+    "format:check": "prettier --check \"**/*.{js,jsx,ts,tsx,json,md,prisma}\""
   },
   "keywords": [],
   "author": "",
@@ -16,5 +16,8 @@
   "dependencies": {
     "concurrently": "^9.1.0",
     "prettier": "^3.4.1"
+  },
+  "devDependencies": {
+    "prettier-plugin-prisma": "^5.0.0"
   }
 }
