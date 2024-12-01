@@ -609,6 +609,8 @@ model Ingredient {
   reorderPoint  Decimal              @db.Decimal(10, 3)
   reorderAmount Decimal              @db.Decimal(10, 3)
   cost          Decimal              @db.Decimal(10, 2)
+  isExtra       Boolean              @default(false)
+  extraPrice    Decimal?             @db.Decimal(10, 2)
   supplierId    String
   supplier      Supplier             @relation(fields: [supplierId], references: [id])
   products      ProductIngredient[]
