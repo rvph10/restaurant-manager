@@ -1,0 +1,205 @@
+=== File: /home/rvph/restaurant-manager/frontend/.env.example ===
+
+NEXT_PUBLIC_API_URL=http://localhost:5000
+=== End of /home/rvph/restaurant-manager/frontend/.env.example ===
+
+
+=== File: /home/rvph/restaurant-manager/backend/.env.example ===
+
+NODE_ENV=development
+PORT=5000
+DATABASE_URL=postgresql://postgres:postgres@postgres:5432/restaurant_db
+REDIS_URL=redis://redis:6379
+JWT_SECRET=your-super-secret-key-change-this
+JWT_EXPIRES_IN=7d
+CORS_ORIGIN=http://localhost:3000
+=== End of /home/rvph/restaurant-manager/backend/.env.example ===
+
+
+=== File: /home/rvph/restaurant-manager/backend/wait-for-it.sh ===
+
+#!/bin/sh
+set -e
+
+until PGPASSWORD=postgres psql -h "postgres" -U "postgres" -c '\q'; do
+  >&2 echo "Postgres is unavailable - sleeping"
+  sleep 1
+done
+
+>&2 echo "Postgres is up - executing command"
+exec "$@"
+=== End of /home/rvph/restaurant-manager/backend/wait-for-it.sh ===
+
+
+=== File: /home/rvph/restaurant-manager/backend/prisma/schema.prisma ===
+
+
+=== End of /home/rvph/restaurant-manager/backend/prisma/schema.prisma ===
+
+
+=== File: /home/rvph/restaurant-manager/docker/backend.Dockerfile ===
+
+FROM node:18.19.0-alpine3.18
+
+# Install PostgreSQL client
+RUN apk add --no-cache postgresql-client gnupg
+
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+
+# Install dependencies
+RUN npm install --legacy-peer-deps
+
+# Copy the rest of the application
+COPY . .
+
+# Generate Prisma Client
+RUN npx prisma generate
+
+# Make wait-for-it.sh executable
+COPY wait-for-it.sh /wait-for-it.sh
+RUN chmod +x /wait-for-it.sh
+
+# Set the entrypoint
+ENTRYPOINT ["/wait-for-it.sh"]
+
+EXPOSE 5000
+
+# Default command
+CMD ["npm", "run", "dev"]
+=== End of /home/rvph/restaurant-manager/docker/backend.Dockerfile ===
+
+
+=== File: /home/rvph/restaurant-manager/docker/frontend.Dockerfile ===
+
+FROM node:18-alpine
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm install --legacy-peer-deps
+
+COPY . .
+
+EXPOSE 3000
+
+CMD ["npm", "run", "dev"]
+=== End of /home/rvph/restaurant-manager/docker/frontend.Dockerfile ===
+
+
+=== File: /home/rvph/restaurant-manager/docker-compose.yml ===
+
+services:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: ../docker/frontend.Dockerfile
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:5000
+      - NODE_ENV=development
+    depends_on:
+      - backend
+    networks:
+      - app-network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: ../docker/backend.Dockerfile
+    ports:
+      - "5000:5000"
+      - "5555:5555"
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - PORT=5000
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/restaurant_db
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=your-super-secret-key-change-this
+      - JWT_EXPIRES_IN=7d
+      - CORS_ORIGIN=http://localhost:3000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - app-network
+
+  postgres:
+    image: postgres:15-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=restaurant_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-network
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+=== End of /home/rvph/restaurant-manager/docker-compose.yml ===
+
+
+=== File: /home/rvph/restaurant-manager/package.json ===
+
+{
+  "name": "restaurant-manager",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "client": "cd client && npm start",
+    "server": "cd server && npm start",
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "format": "prettier --write \"**/*.{js,jsx,ts,tsx,json,md}\"",
+    "format:check": "prettier --check \"**/*.{js,jsx,ts,tsx,json,md}\""
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "concurrently": "^9.1.0",
+    "prettier": "^3.4.1"
+  }
+}
+
+=== End of /home/rvph/restaurant-manager/package.json ===
+
+
