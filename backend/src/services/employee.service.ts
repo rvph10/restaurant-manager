@@ -1,5 +1,5 @@
 import { prisma } from '../prisma/client';
-import { Gender, EmployeeStatus, Department, EmploymentType, Weekday, EmployeeRole, Employee } from '@prisma/client';
+import { Gender, EmployeeStatus, Department, EmploymentType, Weekday, EmployeeRole, Employee, Role } from '@prisma/client';
 import { auditLog, logger } from '../lib/logging/logger';
 import bcrypt from 'bcrypt';
 
@@ -174,7 +174,80 @@ export class EmployeeService {
     }
   }
 
-  async 
+  async createRole (data: {
+    user: string;
+    name: string;
+    description: string | null;
+    permissions: string[];
+  }): Promise<Role> {
+    try {
+      const role = await prisma.role.create({
+        data: {
+          name: data.name,
+          description: data.description,
+          permissions: {
+            set: data.permissions
+          }
+        }
+      });
+
+      await auditLog(
+        'CREATE_ROLE',
+        {
+          roleId: role.id,
+          roleName: role.name,
+          action: 'Created new role'
+        },
+        data.user
+      );
+
+      return role;
+    } catch (error) {
+      logger.error('Error creating role:', error);
+      throw error;
+    }
+  }
+
+  async updateRole(data: {
+    user: string;
+    id: string;
+    name?: string;
+    description?: string | null;
+    permissions?: string[];
+  }): Promise<Role> {
+    try {
+      const updateData: any = { ...data };
+      delete updateData.user;
+      delete updateData.id;
+
+      const role = await prisma.role.update({
+        where: { id: data.id },
+        data: {
+          ...updateData,
+          ...(data.permissions && {
+            permissions: {
+              set: data.permissions
+            }
+          })
+        }
+      });
+
+      await auditLog(
+        'UPDATE_ROLE',
+        {
+          roleId: role.id,
+          roleName: role.name,
+          action: 'Updated role details'
+        },
+        data.user
+      );
+
+      return role;
+    } catch (error) {
+      logger.error('Error updating role:', error);
+      throw error;
+    }
+  }
 
   async getEmployee(id: string): Promise<Employee | null> {
     try {

@@ -36,3 +36,4 @@ prisma/migrations/
 docker-compose.override.yml
 
 allfile.txt
+*.log
