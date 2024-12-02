@@ -27,6 +27,8 @@ find $DIR \( \
   ! -path "*/.next/*" \
   ! -path "*/build/*" \
   ! -path "*/dist/*" \
+  ! -path "*/logs/*" \
+  ! -path "*/docker/*" \
   ! -path "*/.git/*" \
   ! -name "*.log" \
   ! -name "*.map" \

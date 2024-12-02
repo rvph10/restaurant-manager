@@ -32,10 +32,8 @@ export class AuthService {
 
   async register(data: RegisterData): Promise<AuthResponse> {
     try {
-      logger.info('Starting registration process');
-
+      logger.info('Starting registration process...');
       // Check for existing user
-      logger.info('Checking for existing user');
       const existingUser = await this.prisma.employee.findFirst({
         where: {
           OR: [{ email: data.email }, { phone: data.phone }],
@@ -48,13 +46,11 @@ export class AuthService {
       }
 
       // Find or create default role
-      logger.info('Looking for default role');
       let defaultRole = await this.prisma.role.findFirst({
         where: { name: 'USER' },
       });
 
       if (!defaultRole) {
-        logger.info('Creating default role');
         try {
           defaultRole = await this.prisma.role.create({
             data: {
@@ -70,12 +66,7 @@ export class AuthService {
       }
 
       // Hash password
-      logger.info('Hashing password');
       const hashedPassword = await this.hashPassword(data.password);
-      logger.info('Password hashed');
-
-      // Create employee
-      logger.info('Creating employee');
       try {
         const employee = await this.prisma.employee.create({
           data: {
@@ -105,9 +96,7 @@ export class AuthService {
             },
           },
         });
-
-        logger.info('Employee created successfully');
-
+        logger.info('Employee created successfully !');
         const token = this.generateToken({
           userId: employee.id,
           roles: employee.roles.map((r) => r.role.name),
