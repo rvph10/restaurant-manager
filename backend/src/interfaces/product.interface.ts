@@ -42,7 +42,7 @@ export interface CreateProductInput {
 }
 
 export interface CreateSupplierInput {
-    user: string;
+  user: string;
   name: string;
   email?: string;
   phone: string;

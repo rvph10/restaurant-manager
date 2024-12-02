@@ -44,7 +44,7 @@ export class ProductService {
     throw new Error('An unexpected error occurred');
   }
 
-  async checkProductExists(params : {id?: string, name?: string}): Promise<boolean> {
+  async checkProductExists(params: { id?: string; name?: string }): Promise<boolean> {
     try {
       if (!params.id && !params.name) {
         throw new Error('At least one parameter (id or name) must be provided');
@@ -140,7 +140,11 @@ export class ProductService {
     }
   }
 
-  async checkSupplierExists(params : { id?: string; name?: string, phone?: string}): Promise<boolean> {
+  async checkSupplierExists(params: {
+    id?: string;
+    name?: string;
+    phone?: string;
+  }): Promise<boolean> {
     try {
       if (!params.id && !params.name && !params.phone) {
         throw new Error('At least one parameter (id, name or phone) must be provided');
@@ -680,16 +684,16 @@ export class ProductService {
 
   async createSupplier(data: CreateSupplierInput): Promise<Supplier> {
     try {
-        if (!data.name) {
-            throw new Error('Name must be provided');
-        }
-        if (!data.phone) {
-            throw new Error('Phone must be provided');
-        }
+      if (!data.name) {
+        throw new Error('Name must be provided');
+      }
+      if (!data.phone) {
+        throw new Error('Phone must be provided');
+      }
 
-        if (await this.checkSupplierExists({ name: data.name, phone: data.phone })) {
-            throw new Error('Supplier with this name/phone already exists');
-        }
+      if (await this.checkSupplierExists({ name: data.name, phone: data.phone })) {
+        throw new Error('Supplier with this name/phone already exists');
+      }
       const supplier = await prisma.supplier.create({
         data: {
           name: data.name,
@@ -714,7 +718,6 @@ export class ProductService {
 
   async updateSupplier(id: string, data: CreateSupplierInput): Promise<Supplier> {
     try {
-      
       const supplier = await prisma.supplier.update({
         where: { id },
         data: {
@@ -724,14 +727,14 @@ export class ProductService {
           address: data.address || null,
         },
       });
-        auditLog(
-            'UPDATE',
-            {
-            entityName: data.name,
-            entityID: supplier,
-            },
-            data.user
-        );
+      auditLog(
+        'UPDATE',
+        {
+          entityName: data.name,
+          entityID: supplier,
+        },
+        data.user
+      );
       return supplier;
     } catch (error) {
       return this.handleServiceError(error, 'updateSupplier');
