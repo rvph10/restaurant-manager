@@ -30,7 +30,7 @@ import bcrypt from 'bcrypt';
 export class EmployeeService {
   private handleServiceError(error: unknown, context: string): never {
     logger.error(`Error in EmployeeService.${context}:`, error);
-    
+
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
       switch (error.code) {
         case 'P2002':
@@ -45,11 +45,11 @@ export class EmployeeService {
           throw new Error(`Database error: ${error.message}`);
       }
     }
-    
+
     if (error instanceof Error) {
       return this.handleServiceError(error, 'handleServiceError');
     }
-    
+
     throw new Error('An unexpected error occurred');
   }
   async hashPassword(password: string): Promise<string> {
@@ -146,26 +146,24 @@ export class EmployeeService {
     }
   }
 
-  async checkOverlappingTimeOff(employeeId: string, startDate: Date, endDate: Date): Promise<boolean> {
+  async checkOverlappingTimeOff(
+    employeeId: string,
+    startDate: Date,
+    endDate: Date
+  ): Promise<boolean> {
     const count = await prisma.timeOff.count({
       where: {
         employeeId,
         status: 'APPROVED',
         OR: [
           {
-            AND: [
-              { startDate: { lte: startDate } },
-              { endDate: { gte: startDate } }
-            ]
+            AND: [{ startDate: { lte: startDate } }, { endDate: { gte: startDate } }],
           },
           {
-            AND: [
-              { startDate: { lte: endDate } },
-              { endDate: { gte: endDate } }
-            ]
-          }
-        ]
-      }
+            AND: [{ startDate: { lte: endDate } }, { endDate: { gte: endDate } }],
+          },
+        ],
+      },
     });
     return count > 0;
   }
