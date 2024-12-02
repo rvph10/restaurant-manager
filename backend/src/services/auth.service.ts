@@ -3,7 +3,12 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { config } from '../config';
 import { logger } from '../lib/logging/logger';
-import { LoginCredentials, RegisterData, AuthResponse, JwtPayload } from '../interfaces/auth.interface';
+import {
+  LoginCredentials,
+  RegisterData,
+  AuthResponse,
+  JwtPayload,
+} from '../interfaces/auth.interface';
 import { AppError } from '../middleware/error.handler';
 
 export class AuthService {
@@ -14,9 +19,9 @@ export class AuthService {
   }
 
   private async hashPassword(password: string): Promise<string> {
-      const salt = await bcrypt.genSalt(12);
-      const hashedPassword = await bcrypt.hash(password, salt);
-      return hashedPassword;
+    const salt = await bcrypt.genSalt(12);
+    const hashedPassword = await bcrypt.hash(password, salt);
+    return hashedPassword;
   }
 
   private generateToken(payload: JwtPayload): string {
@@ -28,7 +33,7 @@ export class AuthService {
   async register(data: RegisterData): Promise<AuthResponse> {
     try {
       logger.info('Starting registration process');
-  
+
       // Check for existing user
       logger.info('Checking for existing user');
       const existingUser = await this.prisma.employee.findFirst({
@@ -36,18 +41,18 @@ export class AuthService {
           OR: [{ email: data.email }, { phone: data.phone }],
         },
       });
-  
+
       if (existingUser) {
         logger.warn('User already exists');
         throw new AppError(409, 'Email or phone already registered');
       }
-  
+
       // Find or create default role
       logger.info('Looking for default role');
       let defaultRole = await this.prisma.role.findFirst({
         where: { name: 'USER' },
       });
-  
+
       if (!defaultRole) {
         logger.info('Creating default role');
         try {
@@ -63,12 +68,12 @@ export class AuthService {
           throw new AppError(500, 'Failed to create default role');
         }
       }
-  
+
       // Hash password
       logger.info('Hashing password');
       const hashedPassword = await this.hashPassword(data.password);
       logger.info('Password hashed');
-  
+
       // Create employee
       logger.info('Creating employee');
       try {
@@ -85,36 +90,38 @@ export class AuthService {
             hourlyRate: new Prisma.Decimal(0),
             department: ['SERVICE'],
             roles: {
-              create: [{
-                roleId: defaultRole.id
-              }]
-            }
+              create: [
+                {
+                  roleId: defaultRole.id,
+                },
+              ],
+            },
           },
           include: {
             roles: {
               include: {
-                role: true
-              }
-            }
-          }
+                role: true,
+              },
+            },
+          },
         });
-  
+
         logger.info('Employee created successfully');
-  
+
         const token = this.generateToken({
           userId: employee.id,
-          roles: employee.roles.map(r => r.role.name)
+          roles: employee.roles.map((r) => r.role.name),
         });
-  
+
         return {
           user: {
             id: employee.id,
             email: employee.email,
             firstName: employee.firstName,
             lastName: employee.lastName,
-            roles: employee.roles.map(r => r.role.name)
+            roles: employee.roles.map((r) => r.role.name),
           },
-          token
+          token,
         };
       } catch (error) {
         logger.error('Error creating employee:', error);
@@ -126,7 +133,7 @@ export class AuthService {
     } catch (error) {
       logger.error('Registration error:', {
         error: error instanceof Error ? error.message : 'Unknown error',
-        stack: error instanceof Error ? error.stack : undefined
+        stack: error instanceof Error ? error.stack : undefined,
       });
       throw error;
     }
@@ -138,10 +145,10 @@ export class AuthService {
       include: {
         roles: {
           include: {
-            role: true
-          }
-        }
-      }
+            role: true,
+          },
+        },
+      },
     });
 
     if (!employee) {
@@ -155,12 +162,12 @@ export class AuthService {
 
     await this.prisma.employee.update({
       where: { id: employee.id },
-      data: { lastLogin: new Date() }
+      data: { lastLogin: new Date() },
     });
 
     const token = this.generateToken({
       userId: employee.id,
-      roles: employee.roles.map(r => r.role.name)
+      roles: employee.roles.map((r) => r.role.name),
     });
 
     return {
@@ -169,9 +176,9 @@ export class AuthService {
         email: employee.email,
         firstName: employee.firstName,
         lastName: employee.lastName,
-        roles: employee.roles.map(r => r.role.name)
+        roles: employee.roles.map((r) => r.role.name),
       },
-      token
+      token,
     };
   }
 }

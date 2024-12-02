@@ -15,12 +15,12 @@ export class EmployeeController {
     try {
       const employee = await this.employeeService.createEmployee({
         ...req.body,
-        user: req.body.userId // Assuming we pass the creator's ID
+        user: req.body.userId, // Assuming we pass the creator's ID
       });
 
       res.status(201).json({
         status: 'success',
-        data: employee
+        data: employee,
       });
     } catch (error) {
       throw new AppError(400, error instanceof Error ? error.message : 'Failed to create employee');
@@ -34,12 +34,12 @@ export class EmployeeController {
       const employee = await this.employeeService.updateEmployee({
         ...req.body,
         id,
-        user: req.body.userId
+        user: req.body.userId,
       });
 
       res.status(200).json({
         status: 'success',
-        data: employee
+        data: employee,
       });
     } catch (error) {
       throw new AppError(400, error instanceof Error ? error.message : 'Failed to update employee');
@@ -52,14 +52,14 @@ export class EmployeeController {
       const filters = {
         department: req.query.department as Department[],
         status: req.query.status as EmployeeStatus,
-        role: req.query.role as string
+        role: req.query.role as string,
       };
 
       const employees = await this.employeeService.getEmployees(filters);
 
       res.status(200).json({
         status: 'success',
-        data: employees
+        data: employees,
       });
     } catch (error) {
       throw new AppError(400, 'Failed to get employees');
@@ -76,15 +76,18 @@ export class EmployeeController {
         employeeId: id,
         status,
         reason,
-        user: userId
+        user: userId,
       });
 
       res.status(200).json({
         status: 'success',
-        data: employee
+        data: employee,
       });
     } catch (error) {
-      throw new AppError(400, error instanceof Error ? error.message : 'Failed to update employee status');
+      throw new AppError(
+        400,
+        error instanceof Error ? error.message : 'Failed to update employee status'
+      );
     }
   };
 
@@ -96,15 +99,18 @@ export class EmployeeController {
       const employeeRole = await this.employeeService.createEmployeeRole({
         employeeId,
         roleId,
-        user: userId
+        user: userId,
       });
 
       res.status(201).json({
         status: 'success',
-        data: employeeRole
+        data: employeeRole,
       });
     } catch (error) {
-      throw new AppError(400, error instanceof Error ? error.message : 'Failed to create employee role');
+      throw new AppError(
+        400,
+        error instanceof Error ? error.message : 'Failed to create employee role'
+      );
     }
   };
   // Create Time Off Request
@@ -112,15 +118,18 @@ export class EmployeeController {
     try {
       const timeOff = await this.employeeService.createTimeOff({
         ...req.body,
-        user: req.body.userId
+        user: req.body.userId,
       });
 
       res.status(201).json({
         status: 'success',
-        data: timeOff
+        data: timeOff,
       });
     } catch (error) {
-      throw new AppError(400, error instanceof Error ? error.message : 'Failed to create time off request');
+      throw new AppError(
+        400,
+        error instanceof Error ? error.message : 'Failed to create time off request'
+      );
     }
   };
 
@@ -132,12 +141,12 @@ export class EmployeeController {
       const break_ = await this.employeeService.startEmployeeBreak({
         employeeId,
         type: type as BreakType,
-        user: userId
+        user: userId,
       });
 
       res.status(200).json({
         status: 'success',
-        data: break_
+        data: break_,
       });
     } catch (error) {
       throw new AppError(400, error instanceof Error ? error.message : 'Failed to start break');
@@ -152,12 +161,12 @@ export class EmployeeController {
 
       const break_ = await this.employeeService.endEmployeeBreak({
         breakId,
-        user: userId
+        user: userId,
       });
 
       res.status(200).json({
         status: 'success',
-        data: break_
+        data: break_,
       });
     } catch (error) {
       throw new AppError(400, error instanceof Error ? error.message : 'Failed to end break');

@@ -18,7 +18,7 @@ const handlePrismaError = (error: Prisma.PrismaClientKnownRequestError) => {
   logger.error('Prisma error:', {
     code: error.code,
     meta: error.meta,
-    message: error.message
+    message: error.message,
   });
 
   switch (error.code) {
@@ -40,21 +40,21 @@ export const errorHandler = (
   logger.error('Error caught in error handler:', {
     name: err.name,
     message: err.message,
-    stack: err.stack
+    stack: err.stack,
   });
 
   if (err instanceof Prisma.PrismaClientKnownRequestError) {
     const error = handlePrismaError(err);
     return res.status(error.statusCode).json({
       status: 'error',
-      message: error.message
+      message: error.message,
     });
   }
 
   if (err instanceof AppError) {
     return res.status(err.statusCode).json({
       status: 'error',
-      message: err.message
+      message: err.message,
     });
   }
 
@@ -62,6 +62,6 @@ export const errorHandler = (
   logger.error('Unexpected error:', err);
   return res.status(500).json({
     status: 'error',
-    message: 'An unexpected error occurred'
+    message: 'An unexpected error occurred',
   });
 };

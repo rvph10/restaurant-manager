@@ -39,16 +39,16 @@ export const createApp = (): Express => {
   app.get('/health', async (req, res) => {
     try {
       await prisma.$queryRaw`SELECT 1`;
-      res.json({ 
-        status: 'ok', 
+      res.json({
+        status: 'ok',
         timestamp: new Date().toISOString(),
-        database: 'connected'
+        database: 'connected',
       });
     } catch (error) {
-      res.status(500).json({ 
-        status: 'error', 
+      res.status(500).json({
+        status: 'error',
         timestamp: new Date().toISOString(),
-        database: 'disconnected'
+        database: 'disconnected',
       });
     }
   });
@@ -63,7 +63,7 @@ export const createApp = (): Express => {
       stack: err.stack,
       path: req.path,
     });
-    
+
     errorHandler(err, req, res, next);
   });
 

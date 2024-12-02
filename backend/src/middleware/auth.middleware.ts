@@ -35,7 +35,7 @@ export const authorize = (...roles: string[]) => {
       throw new AppError(401, 'Authorization required');
     }
 
-    if (!roles.some(role => req.user!.roles.includes(role))) {
+    if (!roles.some((role) => req.user!.roles.includes(role))) {
       throw new AppError(403, 'Insufficient permissions');
     }
 

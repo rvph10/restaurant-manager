@@ -15,38 +15,38 @@ export class AuthController {
     try {
       logger.info('Registration request received');
       const data: RegisterData = req.body;
-  
+
       // Validate input
       if (!data.email || !data.password || !data.firstName || !data.lastName || !data.phone) {
         logger.warn('Missing required fields');
         throw new AppError(400, 'All fields are required');
       }
-  
+
       // Validate email format
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(data.email)) {
         logger.warn('Invalid email format');
         throw new AppError(400, 'Invalid email format');
       }
-  
+
       // Validate password strength
       if (data.password.length < 8) {
         logger.warn('Password too short');
         throw new AppError(400, 'Password must be at least 8 characters long');
       }
-  
+
       logger.info('Calling auth service register');
       const result = await this.authService.register(data);
-      
+
       logger.info('Registration successful');
       res.status(201).json({
         status: 'success',
-        data: result
+        data: result,
       });
     } catch (error) {
       logger.error('Controller error:', {
         error: error instanceof Error ? error.message : 'Unknown error',
-        stack: error instanceof Error ? error.stack : undefined
+        stack: error instanceof Error ? error.stack : undefined,
       });
       next(error);
     }
@@ -61,10 +61,10 @@ export class AuthController {
       }
 
       const result = await this.authService.login(credentials);
-      
+
       res.status(200).json({
         status: 'success',
-        data: result
+        data: result,
       });
     } catch (error) {
       logger.error('Login error:', error);
