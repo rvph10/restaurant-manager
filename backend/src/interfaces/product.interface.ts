@@ -11,6 +11,6 @@ export interface CreateIngredientInput {
   cost: number;
   isExtra: boolean | false;
   extraPrice?: number;
-  supplierId: string;
+  supplierId?: string;
   price: number;
 }

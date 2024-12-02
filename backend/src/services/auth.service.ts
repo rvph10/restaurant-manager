@@ -2,7 +2,7 @@ import { PrismaClient, Prisma } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { config } from '../config';
-import { logger } from '../lib/logging/logger';
+import { auditLog, logger } from '../lib/logging/logger';
 import {
   LoginCredentials,
   RegisterData,
@@ -102,6 +102,14 @@ export class AuthService {
           roles: employee.roles.map((r) => r.role.name),
         });
 
+        auditLog(
+          'CREATE',
+          {
+            entityName: `${employee.firstName} ${employee.lastName}`,
+            entityID: employee.id,
+          },
+          employee.id
+        );
         return {
           user: {
             id: employee.id,
@@ -158,6 +166,15 @@ export class AuthService {
       userId: employee.id,
       roles: employee.roles.map((r) => r.role.name),
     });
+
+    auditLog(
+      'LOGIN',
+      {
+        entityName: `${employee.firstName} ${employee.lastName}`,
+        entityID: employee.id,
+      },
+      employee.id
+    );
 
     return {
       user: {

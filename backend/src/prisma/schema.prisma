@@ -611,8 +611,8 @@ model Ingredient {
   cost          Decimal              @db.Decimal(10, 2)
   isExtra       Boolean              @default(false)
   extraPrice    Decimal?             @db.Decimal(10, 2)
-  supplierId    String
-  supplier      Supplier             @relation(fields: [supplierId], references: [id])
+  supplierId    String?
+  supplier      Supplier?            @relation(fields: [supplierId], references: [id])
   products      ProductIngredient[]
   stockLogs     IngredientStockLog[]
   createdAt     DateTime             @default(now())
