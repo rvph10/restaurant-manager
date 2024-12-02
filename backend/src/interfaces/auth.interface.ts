@@ -1,18 +1,31 @@
-export interface LoginData {
+import { Gender, EmploymentType, Department, Weekday } from '@prisma/client';
+export interface LoginCredentials {
   email: string;
   password: string;
 }
 
 export interface RegisterData {
-  email: string;
-  password: string;
+  user: string;
   firstName: string;
   lastName: string;
+  email: string;
   phone: string;
+  password: string;
+  birthDate: Date;
+  gender?: Gender;
+  employmentType: EmploymentType;
+  startDate: Date;
+  endDate?: Date | null;
+  department: Department[];
+  hourlyRate: number;
+  bankAccount?: string;
+  maxHoursPerWeek?: number;
+  unavailableDays?: Weekday[];
+  roles: string[];
+  isAdmin?: boolean;
 }
 
 export interface AuthResponse {
-  token: string;
   user: {
     id: string;
     email: string;
@@ -20,4 +33,10 @@ export interface AuthResponse {
     lastName: string;
     roles: string[];
   };
+  token: string;
+}
+
+export interface JwtPayload {
+  userId: string;
+  roles: string[];
 }

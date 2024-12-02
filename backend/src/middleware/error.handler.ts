@@ -14,6 +14,23 @@ export class AppError extends Error {
   }
 }
 
+const handlePrismaError = (error: Prisma.PrismaClientKnownRequestError) => {
+  logger.error('Prisma error:', {
+    code: error.code,
+    meta: error.meta,
+    message: error.message
+  });
+
+  switch (error.code) {
+    case 'P2002':
+      return new AppError(409, 'A record with this value already exists');
+    case 'P2025':
+      return new AppError(404, 'Record not found');
+    default:
+      return new AppError(500, `Database error: ${error.message}`);
+  }
+};
+
 export const errorHandler = (
   err: Error | AppError | Prisma.PrismaClientKnownRequestError,
   req: Request,
@@ -21,45 +38,30 @@ export const errorHandler = (
   next: NextFunction
 ) => {
   logger.error('Error caught in error handler:', {
-    error: err,
-    stack: err.stack,
-    path: req.path,
-    method: req.method,
-    body: { ...req.body, password: '[REDACTED]' },
+    name: err.name,
+    message: err.message,
+    stack: err.stack
   });
 
-  // Handle Prisma Errors
   if (err instanceof Prisma.PrismaClientKnownRequestError) {
-    if (err.code === 'P2002') {
-      return res.status(409).json({
-        status: 'error',
-        message: 'A record with this value already exists.',
-        error: process.env.NODE_ENV === 'development' ? err : undefined,
-      });
-    }
-    return res.status(400).json({
+    const error = handlePrismaError(err);
+    return res.status(error.statusCode).json({
       status: 'error',
-      message: 'Database operation failed',
-      error: process.env.NODE_ENV === 'development' ? err : undefined,
+      message: error.message
     });
   }
 
-  // Handle AppError
   if (err instanceof AppError) {
     return res.status(err.statusCode).json({
       status: 'error',
-      message: err.message,
-      ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
+      message: err.message
     });
   }
 
-  // Handle other errors
+  // Unexpected errors
+  logger.error('Unexpected error:', err);
   return res.status(500).json({
     status: 'error',
-    message: 'Internal server error',
-    ...(process.env.NODE_ENV === 'development' && {
-      error: err.message,
-      stack: err.stack,
-    }),
+    message: 'An unexpected error occurred'
   });
 };

@@ -25,7 +25,7 @@ import {
   TimeOffType,
 } from '@prisma/client';
 import { auditLog, logger } from '../lib/logging/logger';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 
 export class EmployeeService {
   private handleServiceError(error: unknown, context: string): never {
@@ -51,13 +51,6 @@ export class EmployeeService {
     }
 
     throw new Error('An unexpected error occurred');
-  }
-  async hashPassword(password: string): Promise<string> {
-    return bcrypt.hash(password, 10);
-  }
-
-  async comparePassword(password: string, hash: string): Promise<boolean> {
-    return bcrypt.compare(password, hash);
   }
 
   async employeeExists(filters: {
@@ -222,7 +215,7 @@ export class EmployeeService {
       const employee = await prisma.employee.create({
         data: {
           ...data,
-          password: await this.hashPassword(data.password),
+          password: data.password,
           roles: {
             create: data.roles.map((roleId) => ({
               roleId: roleId,
@@ -238,7 +231,7 @@ export class EmployeeService {
           employeeName: `${employee.firstName} ${employee.lastName}`,
           action: 'Created new employee',
         },
-        data.user
+        data.user || 'SYSTEM'
       );
 
       return employee;
@@ -354,23 +347,6 @@ export class EmployeeService {
     } catch (error) {
       logger.error('Error getting employees:', error);
       return this.handleServiceError(error, 'getEmployees');
-    }
-  }
-
-  async validatePassword(data: { email: string; password: string }): Promise<boolean> {
-    try {
-      const employee = await prisma.employee.findUnique({
-        where: { email: data.email },
-      });
-
-      if (!employee) {
-        return false;
-      }
-
-      return this.comparePassword(data.password, employee.password);
-    } catch (error) {
-      logger.error('Error validating password:', error);
-      return this.handleServiceError(error, 'validatePassword');
     }
   }
 

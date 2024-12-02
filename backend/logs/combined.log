@@ -2032,3 +2032,348 @@
 2024-12-02 11:05:03 [[32minfo[39m]: [32mSuccessfully connected to database[39m
 2024-12-02 11:05:03 [[32minfo[39m]: [32mServer is running on port 5000[39m
 2024-12-02 11:05:03 [[32minfo[39m]: [32mEnvironment: development[39m
+2024-12-02 11:08:59 [[32minfo[39m]: [32mSuccessfully connected to database[39m
+2024-12-02 11:08:59 [[32minfo[39m]: [32mServer is running on port 5000[39m
+2024-12-02 11:08:59 [[32minfo[39m]: [32mEnvironment: development[39m
+2024-12-02 11:09:14 [[32minfo[39m]: [32mSuccessfully connected to database[39m
+2024-12-02 11:09:14 [[32minfo[39m]: [32mServer is running on port 5000[39m
+2024-12-02 11:09:14 [[32minfo[39m]: [32mEnvironment: development[39m
+2024-12-02 11:13:19 [[32minfo[39m]: [32mSuccessfully connected to database[39m
+2024-12-02 11:13:19 [[32minfo[39m]: [32mServer is running on port 5000[39m
+2024-12-02 11:13:19 [[32minfo[39m]: [32mEnvironment: development[39m
+2024-12-02 11:14:48 [[32minfo[39m]: [32mPOST /api/auth/register[39m
+{
+  "body": {
+    "email": "test@example.com",
+    "password": "password123",
+    "firstName": "John",
+    "lastName": "Doe",
+    "phone": "1234567890"
+  },
+  "query": {},
+  "params": {}
+}
+2024-12-02 11:17:41 [[32minfo[39m]: [32mSuccessfully connected to database[39m
+2024-12-02 11:17:41 [[32minfo[39m]: [32mServer is running on port 5000[39m
+2024-12-02 11:17:41 [[32minfo[39m]: [32mEnvironment: development[39m
+2024-12-02 11:48:01 [[32minfo[39m]: [32mSuccessfully connected to database[39m
+2024-12-02 11:48:01 [[32minfo[39m]: [32mServer is running on port 5000[39m
+2024-12-02 11:48:01 [[32minfo[39m]: [32mEnvironment: development[39m
+2024-12-02 11:48:02 [[32minfo[39m]: [32mPOST /api/auth/register[39m
+{
+  "body": {
+    "email": "test@example.com",
+    "password": "password123",
+    "firstName": "John",
+    "lastName": "Doe",
+    "phone": "1234567890"
+  },
+  "query": {},
+  "params": {}
+}
+2024-12-02 11:48:35 [[32minfo[39m]: [32mSuccessfully connected to database[39m
+2024-12-02 11:48:36 [[32minfo[39m]: [32mServer is running on port 5000[39m
+2024-12-02 11:48:36 [[32minfo[39m]: [32mEnvironment: development[39m
+2024-12-02 11:50:06 [[32minfo[39m]: [32mSuccessfully connected to database[39m
+2024-12-02 11:50:06 [[32minfo[39m]: [32mServer is running on port 5000[39m
+2024-12-02 11:50:06 [[32minfo[39m]: [32mEnvironment: development[39m
+2024-12-02 11:51:32 [[32minfo[39m]: [32mSuccessfully connected to database[39m
+2024-12-02 11:51:32 [[32minfo[39m]: [32mServer is running on port 5000[39m
+2024-12-02 11:51:32 [[32minfo[39m]: [32mEnvironment: development[39m
+2024-12-02 11:51:44 [[32minfo[39m]: [32mSuccessfully connected to database[39m
+2024-12-02 11:51:44 [[32minfo[39m]: [32mServer is running on port 5000[39m
+2024-12-02 11:51:44 [[32minfo[39m]: [32mEnvironment: development[39m
+2024-12-02 11:51:56 [[32minfo[39m]: [32mSuccessfully connected to database[39m
+2024-12-02 11:51:56 [[32minfo[39m]: [32mServer is running on port 5000[39m
+2024-12-02 11:51:56 [[32minfo[39m]: [32mEnvironment: development[39m
+2024-12-02 11:52:10 [[32minfo[39m]: [32mSuccessfully connected to database[39m
+2024-12-02 11:52:10 [[32minfo[39m]: [32mServer is running on port 5000[39m
+2024-12-02 11:52:10 [[32minfo[39m]: [32mEnvironment: development[39m
+2024-12-02 11:52:21 [[32minfo[39m]: [32mSuccessfully connected to database[39m
+2024-12-02 11:52:21 [[32minfo[39m]: [32mServer is running on port 5000[39m
+2024-12-02 11:52:21 [[32minfo[39m]: [32mEnvironment: development[39m
+2024-12-02 11:52:29 [[32minfo[39m]: [32mSuccessfully connected to database[39m
+2024-12-02 11:52:29 [[32minfo[39m]: [32mServer is running on port 5000[39m
+2024-12-02 11:52:29 [[32minfo[39m]: [32mEnvironment: development[39m
+2024-12-02 11:52:38 [[32minfo[39m]: [32mSuccessfully connected to database[39m
+2024-12-02 11:52:38 [[32minfo[39m]: [32mServer is running on port 5000[39m
+2024-12-02 11:52:38 [[32minfo[39m]: [32mEnvironment: development[39m
+2024-12-02 11:52:47 [[32minfo[39m]: [32mSuccessfully connected to database[39m
+2024-12-02 11:52:47 [[32minfo[39m]: [32mServer is running on port 5000[39m
+2024-12-02 11:52:47 [[32minfo[39m]: [32mEnvironment: development[39m
+2024-12-02 11:52:56 [[32minfo[39m]: [32mSuccessfully connected to database[39m
+2024-12-02 11:52:56 [[32minfo[39m]: [32mServer is running on port 5000[39m
+2024-12-02 11:52:56 [[32minfo[39m]: [32mEnvironment: development[39m
+2024-12-02 11:53:12 [[32minfo[39m]: [32mSuccessfully connected to database[39m
+2024-12-02 11:53:12 [[32minfo[39m]: [32mServer is running on port 5000[39m
+2024-12-02 11:53:12 [[32minfo[39m]: [32mEnvironment: development[39m
+2024-12-02 11:53:20 [[32minfo[39m]: [32mSuccessfully connected to database[39m
+2024-12-02 11:53:20 [[32minfo[39m]: [32mServer is running on port 5000[39m
+2024-12-02 11:53:20 [[32minfo[39m]: [32mEnvironment: development[39m
+2024-12-02 11:53:28 [[32minfo[39m]: [32mSuccessfully connected to database[39m
+2024-12-02 11:53:28 [[32minfo[39m]: [32mServer is running on port 5000[39m
+2024-12-02 11:53:28 [[32minfo[39m]: [32mEnvironment: development[39m
+2024-12-02 11:54:14 [[32minfo[39m]: [32mSuccessfully connected to database[39m
+2024-12-02 11:54:14 [[32minfo[39m]: [32mServer is running on port 5000[39m
+2024-12-02 11:54:14 [[32minfo[39m]: [32mEnvironment: development[39m
+2024-12-02 11:55:05 [[32minfo[39m]: [32mPOST /api/auth/register[39m
+{
+  "body": {
+    "email": "test@example.com",
+    "password": "password123",
+    "firstName": "John",
+    "lastName": "Doe",
+    "phone": "1234567890"
+  },
+  "query": {},
+  "params": {}
+}
+2024-12-02 11:56:38 [[32minfo[39m]: [32mSuccessfully connected to database[39m
+2024-12-02 11:56:38 [[32minfo[39m]: [32mServer is running on port 5000[39m
+2024-12-02 11:56:38 [[32minfo[39m]: [32mEnvironment: development[39m
+2024-12-02 11:58:24 [[32minfo[39m]: [32mPOST /api/auth/register[39m
+{
+  "body": {
+    "email": "test@example.com",
+    "password": "password123",
+    "firstName": "John",
+    "lastName": "Doe",
+    "phone": "1234567890"
+  },
+  "query": {},
+  "params": {}
+}
+2024-12-02 11:59:00 [[32minfo[39m]: [32mSuccessfully connected to database[39m
+2024-12-02 11:59:00 [[32minfo[39m]: [32mServer is running on port 5000[39m
+2024-12-02 11:59:00 [[32minfo[39m]: [32mEnvironment: development[39m
+2024-12-02 11:59:10 [[32minfo[39m]: [32mSuccessfully connected to database[39m
+2024-12-02 11:59:10 [[32minfo[39m]: [32mServer is running on port 5000[39m
+2024-12-02 11:59:10 [[32minfo[39m]: [32mEnvironment: development[39m
+2024-12-02 11:59:20 [[32minfo[39m]: [32mPOST /api/auth/register[39m
+{
+  "body": {
+    "email": "test@example.com",
+    "password": "password123",
+    "firstName": "John",
+    "lastName": "Doe",
+    "phone": "1234567890"
+  },
+  "query": {},
+  "params": {}
+}
+2024-12-02 12:00:53 [[32minfo[39m]: [32mSuccessfully connected to database[39m
+2024-12-02 12:00:53 [[32minfo[39m]: [32mServer is running on port 5000[39m
+2024-12-02 12:00:53 [[32minfo[39m]: [32mEnvironment: development[39m
+2024-12-02 12:01:12 [[32minfo[39m]: [32mSuccessfully connected to database[39m
+2024-12-02 12:01:12 [[32minfo[39m]: [32mServer is running on port 5000[39m
+2024-12-02 12:01:12 [[32minfo[39m]: [32mEnvironment: development[39m
+2024-12-02 12:01:54 [[32minfo[39m]: [32mSuccessfully connected to database[39m
+2024-12-02 12:01:54 [[32minfo[39m]: [32mServer is running on port 5000[39m
+2024-12-02 12:01:54 [[32minfo[39m]: [32mEnvironment: development[39m
+2024-12-02 12:02:00 [[32minfo[39m]: [32mGET /health[39m
+{
+  "body": {},
+  "query": {},
+  "params": {}
+}
+2024-12-02 12:02:00 [[32minfo[39m]: [32mGET /health[39m
+{
+  "duration": "9ms",
+  "status": 200,
+  "ip": "::ffff:172.28.0.1"
+}
+2024-12-02 12:02:10 [[32minfo[39m]: [32mPOST /api/auth/register[39m
+{
+  "body": {
+    "email": "test@example.com",
+    "password": "password123",
+    "firstName": "John",
+    "lastName": "Doe",
+    "phone": "1234567890"
+  },
+  "query": {},
+  "params": {}
+}
+2024-12-02 12:02:10 [[32minfo[39m]: [32mRegistration request received[39m
+2024-12-02 12:02:10 [[32minfo[39m]: [32mCalling auth service register[39m
+2024-12-02 12:02:10 [[32minfo[39m]: [32mStarting registration process[39m
+2024-12-02 12:02:10 [[32minfo[39m]: [32mChecking for existing user[39m
+2024-12-02 12:02:10 [[32minfo[39m]: [32mLooking for default role[39m
+2024-12-02 12:02:10 [[32minfo[39m]: [32mHashing password[39m
+2024-12-02 12:04:10 [[32minfo[39m]: [32mSuccessfully connected to database[39m
+2024-12-02 12:04:10 [[32minfo[39m]: [32mServer is running on port 5000[39m
+2024-12-02 12:04:10 [[32minfo[39m]: [32mEnvironment: development[39m
+2024-12-02 12:04:46 [[32minfo[39m]: [32mSuccessfully connected to database[39m
+2024-12-02 12:04:46 [[32minfo[39m]: [32mServer is running on port 5000[39m
+2024-12-02 12:04:46 [[32minfo[39m]: [32mEnvironment: development[39m
+2024-12-02 12:04:55 [[32minfo[39m]: [32mPOST /api/auth/register[39m
+{
+  "body": {
+    "email": "test@example.com",
+    "password": "password123",
+    "firstName": "John",
+    "lastName": "Doe",
+    "phone": "1234567890"
+  },
+  "query": {},
+  "params": {}
+}
+2024-12-02 12:04:55 [[32minfo[39m]: [32mRegistration request received[39m
+2024-12-02 12:04:55 [[32minfo[39m]: [32mCalling auth service register[39m
+2024-12-02 12:04:55 [[32minfo[39m]: [32mStarting registration process[39m
+2024-12-02 12:04:55 [[32minfo[39m]: [32mChecking for existing user[39m
+2024-12-02 12:04:55 [[32minfo[39m]: [32mLooking for default role[39m
+2024-12-02 12:04:55 [[32minfo[39m]: [32mHashing password[39m
+2024-12-02 12:05:33 [[32minfo[39m]: [32mSuccessfully connected to database[39m
+2024-12-02 12:05:33 [[32minfo[39m]: [32mServer is running on port 5000[39m
+2024-12-02 12:05:33 [[32minfo[39m]: [32mEnvironment: development[39m
+2024-12-02 12:05:39 [[32minfo[39m]: [32mPOST /api/auth/register[39m
+{
+  "body": {
+    "email": "test@example.com",
+    "password": "password123",
+    "firstName": "John",
+    "lastName": "Doe",
+    "phone": "1234567890"
+  },
+  "query": {},
+  "params": {}
+}
+2024-12-02 12:05:39 [[32minfo[39m]: [32mRegistration request received[39m
+2024-12-02 12:05:39 [[32minfo[39m]: [32mCalling auth service register[39m
+2024-12-02 12:05:39 [[32minfo[39m]: [32mStarting registration process[39m
+2024-12-02 12:05:39 [[32minfo[39m]: [32mChecking for existing user[39m
+2024-12-02 12:05:39 [[32minfo[39m]: [32mLooking for default role[39m
+2024-12-02 12:05:39 [[32minfo[39m]: [32mHashing password[39m
+2024-12-02 12:06:00 [[32minfo[39m]: [32mSuccessfully connected to database[39m
+2024-12-02 12:06:00 [[32minfo[39m]: [32mServer is running on port 5000[39m
+2024-12-02 12:06:00 [[32minfo[39m]: [32mEnvironment: development[39m
+2024-12-02 12:06:03 [[32minfo[39m]: [32mSuccessfully connected to database[39m
+2024-12-02 12:06:03 [[32minfo[39m]: [32mServer is running on port 5000[39m
+2024-12-02 12:06:03 [[32minfo[39m]: [32mEnvironment: development[39m
+2024-12-02 12:06:05 [[32minfo[39m]: [32mPOST /api/auth/register[39m
+{
+  "body": {
+    "email": "test@example.com",
+    "password": "password123",
+    "firstName": "John",
+    "lastName": "Doe",
+    "phone": "1234567890"
+  },
+  "query": {},
+  "params": {}
+}
+2024-12-02 12:06:05 [[32minfo[39m]: [32mRegistration request received[39m
+2024-12-02 12:06:05 [[32minfo[39m]: [32mCalling auth service register[39m
+2024-12-02 12:06:05 [[32minfo[39m]: [32mStarting registration process[39m
+2024-12-02 12:06:05 [[32minfo[39m]: [32mChecking for existing user[39m
+2024-12-02 12:06:05 [[32minfo[39m]: [32mLooking for default role[39m
+2024-12-02 12:06:05 [[32minfo[39m]: [32mHashing password[39m
+2024-12-02 12:06:05 [[32minfo[39m]: [32mHashing password in method[39m
+2024-12-02 12:06:37 [[32minfo[39m]: [32mSuccessfully connected to database[39m
+2024-12-02 12:06:37 [[32minfo[39m]: [32mServer is running on port 5000[39m
+2024-12-02 12:06:37 [[32minfo[39m]: [32mEnvironment: development[39m
+2024-12-02 12:06:43 [[32minfo[39m]: [32mSuccessfully connected to database[39m
+2024-12-02 12:06:43 [[32minfo[39m]: [32mServer is running on port 5000[39m
+2024-12-02 12:06:43 [[32minfo[39m]: [32mEnvironment: development[39m
+2024-12-02 12:07:01 [[32minfo[39m]: [32mSuccessfully connected to database[39m
+2024-12-02 12:07:01 [[32minfo[39m]: [32mServer is running on port 5000[39m
+2024-12-02 12:07:01 [[32minfo[39m]: [32mEnvironment: development[39m
+2024-12-02 12:07:02 [[32minfo[39m]: [32mPOST /api/auth/register[39m
+{
+  "body": {
+    "email": "test@example.com",
+    "password": "password123",
+    "firstName": "John",
+    "lastName": "Doe",
+    "phone": "1234567890"
+  },
+  "query": {},
+  "params": {}
+}
+2024-12-02 12:07:02 [[32minfo[39m]: [32mRegistration request received[39m
+2024-12-02 12:07:02 [[32minfo[39m]: [32mCalling auth service register[39m
+2024-12-02 12:07:02 [[32minfo[39m]: [32mStarting registration process[39m
+2024-12-02 12:07:02 [[32minfo[39m]: [32mChecking for existing user[39m
+2024-12-02 12:07:02 [[32minfo[39m]: [32mLooking for default role[39m
+2024-12-02 12:07:02 [[32minfo[39m]: [32mHashing password[39m
+2024-12-02 12:08:00 [[32minfo[39m]: [32mSuccessfully connected to database[39m
+2024-12-02 12:08:00 [[32minfo[39m]: [32mServer is running on port 5000[39m
+2024-12-02 12:08:00 [[32minfo[39m]: [32mEnvironment: development[39m
+2024-12-02 12:08:08 [[32minfo[39m]: [32mSuccessfully connected to database[39m
+2024-12-02 12:08:08 [[32minfo[39m]: [32mServer is running on port 5000[39m
+2024-12-02 12:08:08 [[32minfo[39m]: [32mEnvironment: development[39m
+2024-12-02 12:08:29 [[32minfo[39m]: [32mPOST /api/auth/register[39m
+{
+  "body": {
+    "email": "test@example.com",
+    "password": "password123",
+    "firstName": "John",
+    "lastName": "Doe",
+    "phone": "1234567890"
+  },
+  "query": {},
+  "params": {}
+}
+2024-12-02 12:08:29 [[32minfo[39m]: [32mRegistration request received[39m
+2024-12-02 12:08:29 [[32minfo[39m]: [32mCalling auth service register[39m
+2024-12-02 12:08:29 [[32minfo[39m]: [32mStarting registration process[39m
+2024-12-02 12:08:29 [[32minfo[39m]: [32mChecking for existing user[39m
+2024-12-02 12:08:29 [[32minfo[39m]: [32mLooking for default role[39m
+2024-12-02 12:08:29 [[32minfo[39m]: [32mHashing password[39m
+2024-12-02 12:08:29 [[32minfo[39m]: [32mStarting password hashing[39m
+2024-12-02 12:11:12 [[32minfo[39m]: [32mSuccessfully connected to database[39m
+2024-12-02 12:11:12 [[32minfo[39m]: [32mServer is running on port 5000[39m
+2024-12-02 12:11:12 [[32minfo[39m]: [32mEnvironment: development[39m
+2024-12-02 12:12:37 [[32minfo[39m]: [32mSuccessfully connected to database[39m
+2024-12-02 12:12:37 [[32minfo[39m]: [32mServer is running on port 5000[39m
+2024-12-02 12:12:37 [[32minfo[39m]: [32mEnvironment: development[39m
+2024-12-02 12:12:44 [[32minfo[39m]: [32mPOST /api/auth/register[39m
+{
+  "body": {
+    "email": "test@example.com",
+    "password": "password123",
+    "firstName": "John",
+    "lastName": "Doe",
+    "phone": "1234567890"
+  },
+  "query": {},
+  "params": {}
+}
+2024-12-02 12:12:44 [[32minfo[39m]: [32mRegistration request received[39m
+2024-12-02 12:12:44 [[32minfo[39m]: [32mCalling auth service register[39m
+2024-12-02 12:12:44 [[32minfo[39m]: [32mStarting registration process[39m
+2024-12-02 12:12:44 [[32minfo[39m]: [32mChecking for existing user[39m
+2024-12-02 12:12:44 [[32minfo[39m]: [32mLooking for default role[39m
+2024-12-02 12:12:44 [[32minfo[39m]: [32mHashing password[39m
+2024-12-02 12:12:44 [[32minfo[39m]: [32mStarting password hashing[39m
+2024-12-02 12:12:44 [[32minfo[39m]: [32mSalt generated[39m
+2024-12-02 12:12:44 [[32minfo[39m]: [32mPassword hashed successfully[39m
+2024-12-02 12:12:44 [[32minfo[39m]: [32mPassword hashed[39m
+2024-12-02 12:12:44 [[32minfo[39m]: [32mCreating employee[39m
+2024-12-02 12:12:44 [[32minfo[39m]: [32mEmployee created successfully[39m
+2024-12-02 12:12:44 [[32minfo[39m]: [32mRegistration successful[39m
+2024-12-02 12:12:44 [[32minfo[39m]: [32mPOST /register[39m
+{
+  "duration": "323ms",
+  "status": 201,
+  "ip": "::ffff:172.28.0.1"
+}
+2024-12-02 12:14:05 [[32minfo[39m]: [32mPOST /api/auth/login[39m
+{
+  "body": {
+    "email": "test@example.com",
+    "password": "password123"
+  },
+  "query": {},
+  "params": {}
+}
+2024-12-02 12:14:06 [[32minfo[39m]: [32mPOST /login[39m
+{
+  "duration": "306ms",
+  "status": 200,
+  "ip": "::ffff:172.28.0.1"
+}
+2024-12-02 12:14:53 [[32minfo[39m]: [32mSuccessfully connected to database[39m
+2024-12-02 12:14:53 [[32minfo[39m]: [32mServer is running on port 5000[39m
+2024-12-02 12:14:53 [[32minfo[39m]: [32mEnvironment: development[39m
