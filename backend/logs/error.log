@@ -1,0 +1,19 @@
+2024-12-01 22:20:35 [[31merror[39m]: [31mRegistration error: [39m
+[31mInvalid `this.prisma.employee.findFirst()` invocation in[39m
+[31m/app/src/services/auth.service.ts:35:55[39m
+
+[31m  32 }): Promise<{ employee: Employee; token: string }> {[39m
+[31m  33   try {[39m
+[31m  34     // Check if user exists[39m
+[31m→ 35     const existingUser = await this.prisma.employee.findFirst([39m
+[31mThe table `public.employees` does not exist in the current database.[39m
+{
+  "name": "PrismaClientKnownRequestError",
+  "code": "P2021",
+  "clientVersion": "6.0.0",
+  "meta": {
+    "modelName": "Employee",
+    "table": "public.employees"
+  },
+  "stack": "PrismaClientKnownRequestError: \nInvalid `this.prisma.employee.findFirst()` invocation in\n/app/src/services/auth.service.ts:35:55\n\n  32 }): Promise<{ employee: Employee; token: string }> {\n  33   try {\n  34     // Check if user exists\n→ 35     const existingUser = await this.prisma.employee.findFirst(\nThe table `public.employees` does not exist in the current database.\n    at Mn.handleRequestError (/app/node_modules/@prisma/client/runtime/library.js:121:7338)\n    at Mn.handleAndLogRequestError (/app/node_modules/@prisma/client/runtime/library.js:121:6663)\n    at Mn.request (/app/node_modules/@prisma/client/runtime/library.js:121:6370)\n    at async l (/app/node_modules/@prisma/client/runtime/library.js:130:9633)\n    at async AuthService.register (/app/src/services/auth.service.ts:35:28)\n    at async AuthController.register (/app/src/controllers/auth.controller.ts:32:35)"
+}

@@ -18,7 +18,7 @@ const cleanup = async () => {
   }
 };
 
-const handleShutdown = async (server: any) => {
+const handleShutdown = async (server: http.Server) => {
   logger.info('Shutdown signal received');
 
   server.close(async () => {
@@ -33,6 +33,17 @@ const handleShutdown = async (server: any) => {
   }, 30000);
 };
 
+// Add global error handlers
+process.on('uncaughtException', (error) => {
+  logger.error('Uncaught Exception:', error);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  process.exit(1);
+});
+
 async function bootstrap() {
   try {
     // Test database connection
@@ -42,21 +53,23 @@ async function bootstrap() {
     const app = createApp();
     const server = http.createServer(app);
 
-    app.listen(port, () => {
+    server.listen(port, () => {
       logger.info(`Server is running on port ${port}`);
       logger.info(`Environment: ${process.env.NODE_ENV}`);
     });
 
+    // Handle graceful shutdown
     process.on('SIGTERM', () => handleShutdown(server));
     process.on('SIGINT', () => handleShutdown(server));
+
   } catch (error) {
     logger.error('Unable to start server:', error);
-    await prisma.$disconnect();
+    await cleanup();
     process.exit(1);
   }
 }
 
 bootstrap().catch((error) => {
-  logger.error('Unhandled error:', error);
+  logger.error('Unhandled error during bootstrap:', error);
   process.exit(1);
 });

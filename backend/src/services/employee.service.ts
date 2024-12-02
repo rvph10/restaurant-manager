@@ -1,5 +1,5 @@
 import { prisma } from '../prisma/client';
-import { Employee, EmployeeRole, EmployeeStatus, Department, EmploymentType } from '@prisma/client';
+import { Gender, EmployeeStatus, Department, EmploymentType, Weekday, EmployeeRole, Employee } from '@prisma/client';
 import { auditLog, logger } from '../lib/logging/logger';
 import bcrypt from 'bcrypt';
 
@@ -19,41 +19,31 @@ export class EmployeeService {
     email: string;
     phone: string;
     password: string;
+    status: EmployeeStatus | null; 
     birthDate: Date;
-    employmentType: string;
+    Gender: Gender;
+    employmentType: EmploymentType;
     startDate: Date;
+    endDate: Date | null;
     department: Department[];
     hourlyRate: number;
+    bankAccount: string;
     maxHoursPerWeek?: number;
-    roles: string[];
+    unavailableDays: Weekday[];
+    roles: EmployeeRole[];
+    isAdmin: boolean;
   }): Promise<Employee> {
     try {
       const employee = await prisma.employee.create({
         data: {
-          firstName: data.firstName,
-          lastName: data.lastName,
-          email: data.email,
-          phone: data.phone,
+          ...data,
           password: await this.hashPassword(data.password),
-          birthDate: data.birthDate,
-          employmentType: data.employmentType as EmploymentType,
-          startDate: data.startDate,
-          department: data.department,
-          hourlyRate: data.hourlyRate,
-          maxHoursPerWeek: data.maxHoursPerWeek || 40,
           roles: {
             create: data.roles.map(roleId => ({
               roleId: roleId
             }))
           }
         },
-        include: {
-          roles: {
-            include: {
-              role: true
-            }
-          }
-        }
       });
 
       await auditLog(
@@ -183,6 +173,8 @@ export class EmployeeService {
       throw error;
     }
   }
+
+  async 
 
   async getEmployee(id: string): Promise<Employee | null> {
     try {

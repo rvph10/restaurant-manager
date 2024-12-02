@@ -3,9 +3,10 @@ import cors from 'cors';
 import helmet from 'helmet';
 import { router } from './routes/index.routes';
 import compression from 'compression';
-import { errorHandler, AppError } from './middleware/error.handler';
+import { errorHandler } from './middleware/error.handler';
 import { notFoundHandler } from './middleware/notFound.handler';
 import { requestLogger } from './middleware/request.logger';
+import { logger } from './lib/logging/logger';
 
 export const createApp = (): Express => {
   const app = express();
@@ -23,6 +24,16 @@ export const createApp = (): Express => {
   app.use(express.urlencoded({ extended: true }));
   app.use(requestLogger);
 
+  // Request logging middleware
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    logger.info(`${req.method} ${req.path}`, {
+      body: req.body,
+      query: req.query,
+      params: req.params
+    });
+    next();
+  });
+
   // Health Check
   app.get('/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
@@ -31,9 +42,11 @@ export const createApp = (): Express => {
   // API Routes
   app.use('/api', router);
 
-  // Error Handling
-  app.use(notFoundHandler);
-  app.use((err: Error | AppError, req: Request, res: Response, next: NextFunction) => {
+  // 404 handler - should come after routes
+  app.use('*', notFoundHandler);
+
+  // Error handler - should be last
+  app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
     errorHandler(err, req, res, next);
   });
 

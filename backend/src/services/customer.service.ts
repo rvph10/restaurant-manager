@@ -29,30 +29,21 @@ export class CustomerService {
         whereClause.OR.push({ phone });
       }
 
-      return await prisma.employee.findFirst({
+      // First try to find an employee
+      const employee = await prisma.employee.findFirst({
         where: whereClause,
-        select: {
-          id: true,
-          firstName: true,
-          lastName: true,
-          email: true,
-          phone: true,
-          status: true,
-          department: true,
-          roles: {
-            select: {
-              role: {
-                select: {
-                  name: true,
-                },
-              },
-            },
-          },
-          lastLogin: true,
-          createdAt: true,
-          updatedAt: true,
-        },
       });
+
+      if (employee) {
+        return employee;
+      }
+
+      // If no employee is found, try to find a customer
+      const customer = await prisma.customer.findFirst({
+        where: whereClause,
+      });
+
+      return customer;
     } catch (error) {
       logger.error('Error finding user:', error);
       throw error;

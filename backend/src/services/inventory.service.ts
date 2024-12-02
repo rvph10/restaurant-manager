@@ -1,5 +1,5 @@
 import { prisma } from '../prisma/client';
-import { Ingredient, MeasurementUnit, Product, Category } from '@prisma/client';
+import { Ingredient, MeasurementUnit, Product, Category, IngredientStockLog } from '@prisma/client';
 import { auditLog, logger } from '../lib/logging/logger';
 
 export class InventoryService {
@@ -62,7 +62,7 @@ export class InventoryService {
     isExtra?: boolean;
     extraPrice?: number | null;
     supplierId?: string;
-  }): Promise<Ingredient> {
+  }): Promise<Ingredient | null> {
     try {
       const ingredient = await prisma.ingredient.update({
         where: { id: data.id },
@@ -120,7 +120,7 @@ export class InventoryService {
     }
   }
 
-  async getIngredients(): Promise<Ingredient[]> {
+  async getIngredients(): Promise<Ingredient[] | null> {
     try {
       return await prisma.ingredient.findMany({
         include: {
@@ -139,7 +139,7 @@ export class InventoryService {
     }
   }
 
-  async getIngredient(id: string): Promise<Ingredient> {
+  async getIngredient(id: string): Promise<Ingredient | null> {
     try {
       return await prisma.ingredient.findUnique({
         where: { id },
@@ -150,7 +150,7 @@ export class InventoryService {
     }
   }
 
-  async getIngredientByName(name: string): Promise<Ingredient> {
+  async getIngredientByName(name: string): Promise<Ingredient | null> {
     try {
       return await prisma.ingredient.findFirst({
         where: { name },
@@ -361,7 +361,7 @@ export class InventoryService {
     }
   }
 
-  async getProduct(id: string): Promise<Product> {
+  async getProduct(id: string): Promise<Product | null> {
     try {
       return await prisma.product.findUnique({
         where: { id },
@@ -384,7 +384,7 @@ export class InventoryService {
     user: string;
     name: string;
     description?: string | null;
-  }): Promise<Product> {
+  }): Promise<Category> {
     try {
       const category = await prisma.category.create({
         data: {
@@ -410,7 +410,7 @@ export class InventoryService {
     }
   }
 
-  async deleteCategory(data: { user: string; id: string }): Promise<Product> {
+  async deleteCategory(data: { user: string; id: string }): Promise<Category> {
     try {
       const category = await prisma.category.delete({
         where: { id: data.id },
@@ -465,7 +465,7 @@ export class InventoryService {
     }
   }
 
-  async getCategory(id: string): Promise<Category> {
+  async getCategory(id: string): Promise<Category | null> {
     try {
       return await prisma.category.findUnique({
         where: { id },
@@ -479,7 +479,7 @@ export class InventoryService {
     }
   }
 
-  async getCategories(): Promise<Product> {
+  async getCategories(): Promise<Category[] | null> {
     try {
       return await prisma.category.findMany();
     } catch (error) {
