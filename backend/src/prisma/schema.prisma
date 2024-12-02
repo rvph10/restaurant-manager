@@ -607,7 +607,7 @@ model Ingredient {
   unit          MeasurementUnit
   category      IngredientCategory
   reorderPoint  Decimal              @db.Decimal(10, 3)
-  reorderAmount Decimal              @db.Decimal(10, 3) @default(0)
+  reorderAmount Decimal              @default(0) @db.Decimal(10, 3)
   cost          Decimal              @db.Decimal(10, 2)
   isExtra       Boolean              @default(false)
   extraPrice    Decimal?             @db.Decimal(10, 2)

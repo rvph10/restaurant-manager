@@ -29,7 +29,7 @@ const createRedisClient = () => {
         return true;
       }
       return false;
-    }
+    },
   });
 
   redis.on('error', (err) => {
@@ -61,7 +61,7 @@ const createRedisClient = () => {
     try {
       const keys = await redis.keys('sess:*');
       let expiredCount = 0;
-      
+
       for (const key of keys) {
         const session = await redis.get(key);
         if (session) {
@@ -72,7 +72,7 @@ const createRedisClient = () => {
           }
         }
       }
-      
+
       if (expiredCount > 0) {
         logger.info(`Cleaned up ${expiredCount} expired sessions`);
       }
@@ -84,7 +84,7 @@ const createRedisClient = () => {
   redis.on('ready', () => {
     // Initial cleanup
     cleanupSessions();
-    
+
     // Schedule periodic cleanup
     setInterval(cleanupSessions, CLEANUP_INTERVAL);
   });

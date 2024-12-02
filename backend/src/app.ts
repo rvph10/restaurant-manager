@@ -28,10 +28,8 @@ export const createApp = (): Express => {
   app.use(express.urlencoded({ extended: true }));
   app.use(requestLogger);
   app.use(cookieParser());
-  app.use(
-    session(sessionConfig)
-  );
-  
+  app.use(session(sessionConfig));
+
   // Request logging middleware
   app.use((req: Request, res: Response, next: NextFunction) => {
     logger.info(`${req.method} ${req.path}`, {

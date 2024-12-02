@@ -33,11 +33,12 @@ export const cacheMiddleware: RequestHandler = async (
 
       // Cache the response before sending
       const ttl = getCacheTTL(req.path);
-      redisManager.set(cacheKey, body, ttl)
-        .catch(error => logger.error('Cache storage error:', error));
+      redisManager
+        .set(cacheKey, body, ttl)
+        .catch((error) => logger.error('Cache storage error:', error));
 
       logger.debug(`Cache miss for key: ${cacheKey}, storing with TTL: ${ttl}s`);
-      
+
       // Send the response
       return originalJson.call(this, body);
     };

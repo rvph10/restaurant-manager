@@ -3,7 +3,7 @@ import crypto from 'crypto';
 
 export const generateCacheKey = (req: Request): string => {
   const { baseUrl, path, method, query, body } = req;
-  
+
   // Create a string combining relevant request properties
   const keyString = JSON.stringify({
     baseUrl,
