@@ -1,17 +1,25 @@
 import { prisma } from '../prisma/client';
-import { Gender, EmployeeStatus, Department, EmploymentType, Weekday, EmployeeRole, Employee, Role } from '@prisma/client';
+import {
+  Gender,
+  EmployeeStatus,
+  Department,
+  EmploymentType,
+  Weekday,
+  EmployeeRole,
+  Employee,
+  Role,
+} from '@prisma/client';
 import { auditLog, logger } from '../lib/logging/logger';
 import bcrypt from 'bcrypt';
 
 export class EmployeeService {
+  async hashPassword(password: string): Promise<string> {
+    return bcrypt.hash(password, 10);
+  }
 
-    async hashPassword(password: string): Promise<string> {
-        return bcrypt.hash(password, 10);
-    }
-
-    async comparePassword(password: string, hash: string): Promise<boolean> {
-        return bcrypt.compare(password, hash);
-    }
+  async comparePassword(password: string, hash: string): Promise<boolean> {
+    return bcrypt.compare(password, hash);
+  }
   async createEmployee(data: {
     user: string;
     firstName: string;
@@ -19,7 +27,7 @@ export class EmployeeService {
     email: string;
     phone: string;
     password: string;
-    status: EmployeeStatus | null; 
+    status: EmployeeStatus | null;
     birthDate: Date;
     Gender: Gender;
     employmentType: EmploymentType;
@@ -39,10 +47,10 @@ export class EmployeeService {
           ...data,
           password: await this.hashPassword(data.password),
           roles: {
-            create: data.roles.map(roleId => ({
-              roleId: roleId
-            }))
-          }
+            create: data.roles.map((roleId) => ({
+              roleId: roleId,
+            })),
+          },
         },
       });
 
@@ -51,7 +59,7 @@ export class EmployeeService {
         {
           employeeId: employee.id,
           employeeName: `${employee.firstName} ${employee.lastName}`,
-          action: 'Created new employee'
+          action: 'Created new employee',
         },
         data.user
       );
@@ -88,19 +96,19 @@ export class EmployeeService {
           ...(data.roles && {
             roles: {
               deleteMany: {},
-              create: data.roles.map(roleId => ({
-                roleId: roleId
-              }))
-            }
-          })
+              create: data.roles.map((roleId) => ({
+                roleId: roleId,
+              })),
+            },
+          }),
         },
         include: {
           roles: {
             include: {
-              role: true
-            }
-          }
-        }
+              role: true,
+            },
+          },
+        },
       });
 
       await auditLog(
@@ -108,7 +116,7 @@ export class EmployeeService {
         {
           employeeId: employee.id,
           employeeName: `${employee.firstName} ${employee.lastName}`,
-          action: 'Updated employee details'
+          action: 'Updated employee details',
         },
         data.user
       );
@@ -134,19 +142,19 @@ export class EmployeeService {
             roles: {
               some: {
                 role: {
-                  id: filters.role
-                }
-              }
-            }
-          })
+                  id: filters.role,
+                },
+              },
+            },
+          }),
         },
         include: {
           roles: {
             include: {
-              role: true
-            }
-          }
-        }
+              role: true,
+            },
+          },
+        },
       });
     } catch (error) {
       logger.error('Error getting employees:', error);
@@ -154,19 +162,16 @@ export class EmployeeService {
     }
   }
 
-  async validatePassword(data: {
-    email: string;
-    password: string;
-  }): Promise<boolean> {
+  async validatePassword(data: { email: string; password: string }): Promise<boolean> {
     try {
       const employee = await prisma.employee.findUnique({
-        where: { email: data.email }
+        where: { email: data.email },
       });
-  
+
       if (!employee) {
         return false;
       }
-  
+
       return this.comparePassword(data.password, employee.password);
     } catch (error) {
       logger.error('Error validating password:', error);
@@ -174,7 +179,7 @@ export class EmployeeService {
     }
   }
 
-  async createRole (data: {
+  async createRole(data: {
     user: string;
     name: string;
     description: string | null;
@@ -186,9 +191,9 @@ export class EmployeeService {
           name: data.name,
           description: data.description,
           permissions: {
-            set: data.permissions
-          }
-        }
+            set: data.permissions,
+          },
+        },
       });
 
       await auditLog(
@@ -196,7 +201,7 @@ export class EmployeeService {
         {
           roleId: role.id,
           roleName: role.name,
-          action: 'Created new role'
+          action: 'Created new role',
         },
         data.user
       );
@@ -226,10 +231,10 @@ export class EmployeeService {
           ...updateData,
           ...(data.permissions && {
             permissions: {
-              set: data.permissions
-            }
-          })
-        }
+              set: data.permissions,
+            },
+          }),
+        },
       });
 
       await auditLog(
@@ -237,7 +242,7 @@ export class EmployeeService {
         {
           roleId: role.id,
           roleName: role.name,
-          action: 'Updated role details'
+          action: 'Updated role details',
         },
         data.user
       );
@@ -256,10 +261,10 @@ export class EmployeeService {
         include: {
           roles: {
             include: {
-              role: true
-            }
-          }
-        }
+              role: true,
+            },
+          },
+        },
       });
     } catch (error) {
       logger.error('Error getting employee:', error);

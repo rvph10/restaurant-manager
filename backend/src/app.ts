@@ -29,7 +29,7 @@ export const createApp = (): Express => {
     logger.info(`${req.method} ${req.path}`, {
       body: req.body,
       query: req.query,
-      params: req.params
+      params: req.params,
     });
     next();
   });

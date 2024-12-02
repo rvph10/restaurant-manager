@@ -45,7 +45,7 @@ export class InventoryController {
       }
 
       // Check if User exists
-      if (!await this.customerService.findUser({ id: userId })) {
+      if (!(await this.customerService.findUser({ id: userId }))) {
         throw new AppError(404, 'User not found');
       }
 
@@ -85,14 +85,14 @@ export class InventoryController {
       }
 
       // Check if User exists
-      if (!await this.customerService.findUser({ id: userId })) {
+      if (!(await this.customerService.findUser({ id: userId }))) {
         throw new AppError(404, 'User not found');
       }
 
       const ingredient = await this.inventoryService.updateIngredient({
         user: userId,
         id,
-        ...updateData
+        ...updateData,
       });
 
       res.status(200).json({
@@ -116,13 +116,13 @@ export class InventoryController {
         throw new AppError(400, 'User ID is required');
       }
 
-      if (!await this.customerService.findUser({ id: userId })) {
+      if (!(await this.customerService.findUser({ id: userId }))) {
         throw new AppError(404, 'User not found');
       }
 
       await this.inventoryService.deleteIngredient({
         user: userId,
-        id
+        id,
       });
 
       res.status(204).send();
@@ -147,7 +147,7 @@ export class InventoryController {
     try {
       const { id } = req.params;
       const ingredient = await this.inventoryService.getIngredient(id);
-      
+
       if (!ingredient) {
         throw new AppError(404, 'Ingredient not found');
       }
@@ -181,7 +181,7 @@ export class InventoryController {
         throw new AppError(400, 'Missing required fields');
       }
 
-      if (!await this.customerService.findUser({ id: userId })) {
+      if (!(await this.customerService.findUser({ id: userId }))) {
         throw new AppError(404, 'User not found');
       }
 
@@ -217,7 +217,7 @@ export class InventoryController {
         throw new AppError(400, 'User ID is required');
       }
 
-      if (!await this.customerService.findUser({ id: userId })) {
+      if (!(await this.customerService.findUser({ id: userId }))) {
         throw new AppError(404, 'User not found');
       }
 
@@ -247,7 +247,7 @@ export class InventoryController {
 
       await this.inventoryService.deleteProduct({
         user: userId,
-        id
+        id,
       });
 
       res.status(204).send();
@@ -272,7 +272,7 @@ export class InventoryController {
     try {
       const { id } = req.params;
       const product = await this.inventoryService.getProduct(id);
-      
+
       if (!product) {
         throw new AppError(404, 'Product not found');
       }
@@ -295,7 +295,7 @@ export class InventoryController {
         throw new AppError(400, 'Missing required fields');
       }
 
-      if (!await this.customerService.findUser({ id: userId })) {
+      if (!(await this.customerService.findUser({ id: userId }))) {
         throw new AppError(404, 'User not found');
       }
 

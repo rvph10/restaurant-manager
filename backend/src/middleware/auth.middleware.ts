@@ -10,11 +10,7 @@ export interface AuthRequest extends Request {
   };
 }
 
-export const authenticate = async (
-  req: AuthRequest,
-  res: Response,
-  next: NextFunction
-) => {
+export const authenticate = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const authHeader = req.headers.authorization;
 
@@ -27,7 +23,7 @@ export const authenticate = async (
 
     req.user = {
       userId: decoded.userId,
-      roles: decoded.roles
+      roles: decoded.roles,
     };
 
     next();

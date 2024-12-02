@@ -61,7 +61,6 @@ async function bootstrap() {
     // Handle graceful shutdown
     process.on('SIGTERM', () => handleShutdown(server));
     process.on('SIGINT', () => handleShutdown(server));
-
   } catch (error) {
     logger.error('Unable to start server:', error);
     await cleanup();

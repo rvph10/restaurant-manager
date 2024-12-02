@@ -41,7 +41,7 @@ export class AuthController {
         password,
         firstName,
         lastName,
-        phone
+        phone,
       });
 
       // Remove password from response
@@ -49,21 +49,21 @@ export class AuthController {
 
       logger.info('Registration successful:', {
         userId: employee.id,
-        email: employee.email
+        email: employee.email,
       });
 
       res.status(201).json({
         status: 'success',
         data: {
           employee: employeeData,
-          token
-        }
+          token,
+        },
       });
     } catch (error: unknown) {
       logger.error('Registration failed:', {
         error,
         stack: error instanceof Error ? error.stack : undefined,
-        body: req.body
+        body: req.body,
       });
 
       if (error instanceof AppError) throw error;
@@ -77,22 +77,22 @@ export class AuthController {
   login = async (req: Request, res: Response) => {
     try {
       const { email, password } = req.body;
-  
+
       if (!email || !password) {
         throw new AppError(400, 'Email and password are required');
       }
-  
+
       const { employee, token } = await this.authService.login(email, password);
-  
+
       // Remove sensitive data
       const { password: _, ...employeeData } = employee;
-  
+
       res.status(200).json({
         status: 'success',
         data: {
           user: employeeData,
-          token
-        }
+          token,
+        },
       });
     } catch (error) {
       if (error instanceof Error && error.message === 'Invalid credentials') {

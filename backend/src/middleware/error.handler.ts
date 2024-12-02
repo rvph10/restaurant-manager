@@ -25,7 +25,7 @@ export const errorHandler = (
     stack: err.stack,
     path: req.path,
     method: req.method,
-    body: { ...req.body, password: '[REDACTED]' }
+    body: { ...req.body, password: '[REDACTED]' },
   });
 
   // Handle Prisma Errors
@@ -34,13 +34,13 @@ export const errorHandler = (
       return res.status(409).json({
         status: 'error',
         message: 'A record with this value already exists.',
-        error: process.env.NODE_ENV === 'development' ? err : undefined
+        error: process.env.NODE_ENV === 'development' ? err : undefined,
       });
     }
     return res.status(400).json({
       status: 'error',
       message: 'Database operation failed',
-      error: process.env.NODE_ENV === 'development' ? err : undefined
+      error: process.env.NODE_ENV === 'development' ? err : undefined,
     });
   }
 
@@ -49,7 +49,7 @@ export const errorHandler = (
     return res.status(err.statusCode).json({
       status: 'error',
       message: err.message,
-      ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+      ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
     });
   }
 
@@ -57,9 +57,9 @@ export const errorHandler = (
   return res.status(500).json({
     status: 'error',
     message: 'Internal server error',
-    ...(process.env.NODE_ENV === 'development' && { 
+    ...(process.env.NODE_ENV === 'development' && {
       error: err.message,
-      stack: err.stack 
-    })
+      stack: err.stack,
+    }),
   });
 };

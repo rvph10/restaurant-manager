@@ -9,7 +9,7 @@ export class AuthService {
 
   constructor() {
     this.prisma = new PrismaClient({
-      log: ['query', 'error', 'warn']
+      log: ['query', 'error', 'warn'],
     });
   }
 
@@ -24,11 +24,7 @@ export class AuthService {
 
   private generateToken(userId: string, roles: string[]): string {
     try {
-      return jwt.sign(
-        { userId, roles },
-        config.jwt.secret,
-        { expiresIn: config.jwt.expiresIn }
-      );
+      return jwt.sign({ userId, roles }, config.jwt.secret, { expiresIn: config.jwt.expiresIn });
     } catch (error) {
       logger.error('Error generating token:', error);
       throw new Error('Token generation failed');
@@ -48,11 +44,8 @@ export class AuthService {
       // Check if user exists
       const existingUser = await this.prisma.employee.findFirst({
         where: {
-          OR: [
-            { email: data.email },
-            { phone: data.phone }
-          ]
-        }
+          OR: [{ email: data.email }, { phone: data.phone }],
+        },
       });
 
       if (existingUser) {
@@ -63,8 +56,8 @@ export class AuthService {
       // Find or create default role
       let defaultRole = await this.prisma.role.findFirst({
         where: {
-          name: 'USER'
-        }
+          name: 'USER',
+        },
       });
 
       logger.info('Creating or fetching default role');
@@ -74,8 +67,8 @@ export class AuthService {
             data: {
               name: 'USER',
               description: 'Default user role',
-              permissions: []
-            }
+              permissions: [],
+            },
           });
           logger.info('Created default role', { roleId: defaultRole.id });
         } catch (error) {
@@ -102,10 +95,12 @@ export class AuthService {
         hourlyRate: new Prisma.Decimal(0),
         department: ['SERVICE'],
         roles: {
-          create: [{
-            roleId: defaultRole.id
-          }]
-        }
+          create: [
+            {
+              roleId: defaultRole.id,
+            },
+          ],
+        },
       };
 
       const employee = await this.prisma.employee.create({
@@ -113,10 +108,10 @@ export class AuthService {
         include: {
           roles: {
             include: {
-              role: true
-            }
-          }
-        }
+              role: true,
+            },
+          },
+        },
       });
 
       logger.info('Employee created successfully', { employeeId: employee.id });
@@ -124,23 +119,23 @@ export class AuthService {
       // Generate token
       const token = this.generateToken(
         employee.id,
-        employee.roles.map(r => r.role.name)
+        employee.roles.map((r) => r.role.name)
       );
 
       logger.info('Registration completed successfully');
       return { employee, token };
     } catch (error) {
-      logger.error('Registration error:', { 
+      logger.error('Registration error:', {
         error,
         stack: error instanceof Error ? error.stack : undefined,
-        data: { ...data, password: '[REDACTED]' }
+        data: { ...data, password: '[REDACTED]' },
       });
 
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
         logger.error('Prisma error:', {
           code: error.code,
           meta: error.meta,
-          message: error.message
+          message: error.message,
         });
       }
 
@@ -151,40 +146,40 @@ export class AuthService {
   async login(email: string, password: string): Promise<{ employee: Employee; token: string }> {
     try {
       logger.info('Login attempt', { email });
-  
+
       const employee = await this.prisma.employee.findUnique({
         where: { email: email.toLowerCase() },
         include: {
           roles: {
             include: {
-              role: true
-            }
-          }
-        }
+              role: true,
+            },
+          },
+        },
       });
-  
+
       if (!employee) {
         logger.warn('Login failed - user not found', { email });
         throw new Error('Invalid credentials');
       }
-  
+
       const isPasswordValid = await bcrypt.compare(password, employee.password);
       if (!isPasswordValid) {
         logger.warn('Login failed - invalid password', { email });
         throw new Error('Invalid credentials');
       }
-  
+
       // Update last login
       await this.prisma.employee.update({
         where: { id: employee.id },
-        data: { lastLogin: new Date() }
+        data: { lastLogin: new Date() },
       });
-  
+
       const token = this.generateToken(
         employee.id,
-        employee.roles.map(r => r.role.name)
+        employee.roles.map((r) => r.role.name)
       );
-  
+
       logger.info('Login successful', { userId: employee.id });
       return { employee, token };
     } catch (error) {
