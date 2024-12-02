@@ -270,8 +270,8 @@ model Employee {
   breaks   Break[]
 
   // System Fields
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([email])
   @@index([status])
