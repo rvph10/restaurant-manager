@@ -1,7 +1,10 @@
 import express, { Express, Request, Response, NextFunction } from 'express';
+import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import { prisma } from './prisma/client';
 import helmet from 'helmet';
+import session from 'express-session';
+import { sessionConfig } from './config/session';
 import { router } from './routes/index.routes';
 import compression from 'compression';
 import { errorHandler } from './middleware/error.handler';
@@ -24,7 +27,11 @@ export const createApp = (): Express => {
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
   app.use(requestLogger);
-
+  app.use(cookieParser());
+  app.use(
+    session(sessionConfig)
+  );
+  
   // Request logging middleware
   app.use((req: Request, res: Response, next: NextFunction) => {
     logger.info(`${req.method} ${req.path}`, {
@@ -53,7 +60,7 @@ export const createApp = (): Express => {
     }
   });
 
-  // API Routes
+  // API Routes with caching
   app.use('/api', router);
 
   // Error handler - should be last

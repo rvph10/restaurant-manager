@@ -1,11 +1,22 @@
-import RedisStore from 'connect-redis';
-import { redisClient } from './redis';
+import { createClient } from 'redis';
+import session from 'express-session';
+import { RedisStore } from 'connect-redis';
 
-export const sessionConfig = {
-  store: new RedisStore({
-    client: redisClient,
-    prefix: 'session:',
-  }),
+// Initialize Redis client
+export const redisClient = createClient({
+  url: process.env.REDIS_URL || 'redis://redis:6379',
+});
+
+redisClient.connect().catch(console.error);
+
+// Initialize RedisStore
+export const redisStore = new RedisStore({
+  client: redisClient,
+  prefix: 'session:',
+});
+
+export const sessionConfig: session.SessionOptions = {
+  store: redisStore,
   secret: process.env.SESSION_SECRET || 'your-secret-key',
   resave: false,
   saveUninitialized: false,

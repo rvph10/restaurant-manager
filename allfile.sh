@@ -18,9 +18,8 @@ export OUTPUT
 
 # Find all files in frontend and backend directories
 find $DIR \( \
-  -path "*/frontend/*" -o \
-  -path "*/backend/*" -o \
-  -path "*/docker/*" \
+  -path "*/frontend/src/*" -o \
+  -path "*/backend/src/*"\
   \) \
   ! -path "*/node_modules/*" \
   ! -path "*/migrations/*" \
