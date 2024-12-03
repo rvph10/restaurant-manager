@@ -47,7 +47,12 @@ export interface PasswordResetRequest {
   email: string;
 }
 
-export interface PasswordReset {
+export interface PasswordResetResponse {
+  message: string;
+  success: boolean;
+}
+
+export interface PasswordResetVerify {
   token: string;
-  password: string;
+  newPassword: string;
 }

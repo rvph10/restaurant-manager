@@ -9,7 +9,8 @@ import {
   RegisterData,
   AuthResponse,
   JwtPayload,
-  PasswordReset,
+  PasswordResetVerify,
+  PasswordResetResponse,
 } from '../interfaces/auth.interface';
 import { AppError } from '../middleware/error.handler';
 import crypto from 'crypto';
@@ -164,18 +165,6 @@ export class AuthService {
 
     const sessionId = uuid();
 
-    await this.prisma.employee.updateMany({
-      where: {
-        id: employee.id,
-        NOT: {
-          sessionId: sessionId,
-        },
-      },
-      data: {
-        sessionId: null,
-      },
-    });
-
     await this.prisma.employee.update({
       where: { id: employee.id },
       data: {
@@ -212,29 +201,103 @@ export class AuthService {
     };
   }
 
-  public async requestPasswordReset(email: string): Promise<void> {
-    const employee = await this.prisma.employee.findUnique({
-      where: { email: email.toLowerCase() },
-    });
+  private async generateResetToken(): Promise<string> {
+    return crypto.randomBytes(32).toString('hex');
+  }
 
-    if (employee) {
-      const resetToken = crypto.randomBytes(32).toString('hex');
-      const resetTokenExpiry = new Date(Date.now() + 3600000); // 1 hour
-
+  async requestPasswordReset(email: string): Promise<PasswordResetResponse> {
+    try {
+      const employee = await this.prisma.employee.findUnique({
+        where: { email: email.toLowerCase() }
+      });
+  
+      if (!employee) {
+        // Return success even if email doesn't exist (security best practice)
+        return { 
+          success: true,
+          message: 'If your email exists in our system, you will receive a reset link' 
+        };
+      }
+  
+      const resetToken = await this.generateResetToken();
+      const resetTokenExpiry = new Date(Date.now() + 3600000); // 1 hour validity
+  
       await this.prisma.employee.update({
         where: { id: employee.id },
         data: {
           resetPasswordToken: resetToken,
           resetPasswordExpires: resetTokenExpiry,
-        },
+          sessionId: null // Invalidate any existing sessions
+        }
       });
-
-      // TODO: Send email with reset token
-      logger.info(`Password reset requested for ${email}`);
+  
+      // TODO: Send email with reset link
+      // const resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
+      
+      logger.info('Password reset requested', {
+        userId: employee.id,
+        email: employee.email
+      });
+  
+      return { 
+        success: true,
+        message: 'If your email exists in our system, you will receive a reset link' 
+      };
+    } catch (error) {
+      logger.error('Password reset request failed:', error);
+      throw new AppError(500, 'Failed to process password reset request');
+    }
+  }
+  
+  async verifyAndResetPassword(data: PasswordResetVerify): Promise<PasswordResetResponse> {
+    try {
+      const employee = await this.prisma.employee.findFirst({
+        where: {
+          resetPasswordToken: data.token,
+          resetPasswordExpires: {
+            gt: new Date() // Token must not be expired
+          }
+        }
+      });
+  
+      if (!employee) {
+        throw new AppError(400, 'Invalid or expired reset token');
+      }
+  
+      // Hash new password
+      const hashedPassword = await this.hashPassword(data.newPassword);
+  
+      // Update password and clear reset token
+      await this.prisma.employee.update({
+        where: { id: employee.id },
+        data: {
+          password: hashedPassword,
+          resetPasswordToken: null,
+          resetPasswordExpires: null,
+          sessionId: null // Invalidate any existing sessions
+        }
+      });
+  
+      await auditLog(
+        'PASSWORD_RESET',
+        {
+          userId: employee.id,
+          action: 'Password reset completed'
+        },
+        employee.id
+      );
+  
+      return {
+        success: true,
+        message: 'Password has been successfully reset'
+      };
+    } catch (error) {
+      logger.error('Password reset verification failed:', error);
+      throw error;
     }
   }
 
-  async resetPassword(data: PasswordReset): Promise<void> {
+  async resetPassword(data: PasswordResetVerify): Promise<void> {
     const employee = await this.prisma.employee.findFirst({
       where: {
         resetPasswordToken: data.token,
@@ -246,7 +309,7 @@ export class AuthService {
       throw new AppError(400, 'Invalid or expired reset token');
     }
 
-    const hashedPassword = await this.hashPassword(data.password);
+    const hashedPassword = await this.hashPassword(data.newPassword);
 
     await this.prisma.employee.update({
       where: { id: employee.id },
