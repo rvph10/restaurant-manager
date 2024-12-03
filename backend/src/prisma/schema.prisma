@@ -257,6 +257,12 @@ model Employee {
   isAdmin   Boolean        @default(false)
   lastLogin DateTime?
 
+  // Login Tracking
+  lastLoginIP    String?
+  sessionId      String?
+  failedAttempts Int       @default(0)
+  lockedUntil    DateTime?
+
   // Documents & Certifications
   documents      EmployeeDocument[]
   certifications Certification[]
@@ -268,6 +274,10 @@ model Employee {
   shifts   ShiftAssignment[]
   timeoffs TimeOff[]
   breaks   Break[]
+
+  // Password Reset
+  resetPasswordToken   String?   @unique
+  resetPasswordExpires DateTime?
 
   // System Fields
   createdAt DateTime @default(now())

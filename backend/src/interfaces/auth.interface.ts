@@ -2,6 +2,7 @@ import { Gender, EmploymentType, Department, Weekday } from '@prisma/client';
 export interface LoginCredentials {
   email: string;
   password: string;
+  ip?: string;
 }
 
 export interface RegisterData {
@@ -34,9 +35,19 @@ export interface AuthResponse {
     roles: string[];
   };
   token: string;
+  sessionId: string;
 }
 
 export interface JwtPayload {
   userId: string;
   roles: string[];
+}
+
+export interface PasswordResetRequest {
+  email: string;
+}
+
+export interface PasswordReset {
+  token: string;
+  password: string;
 }

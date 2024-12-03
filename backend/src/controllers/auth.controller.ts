@@ -3,6 +3,7 @@ import { AuthService } from '../services/auth.service';
 import { AppError } from '../middleware/error.handler';
 import { LoginCredentials, RegisterData } from '../interfaces/auth.interface';
 import { logger } from '../lib/logging/logger';
+import { AuthenticatedRequest } from '../types/express';
 
 export class AuthController {
   private authService: AuthService;
@@ -71,4 +72,18 @@ export class AuthController {
       next(error);
     }
   };
+  public logout = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+        if (!req.user?.id) {
+            throw new AppError(401, 'Not authenticated');
+        }
+        await this.authService.logout(req.user.id);
+        res.status(200).json({
+            status: 'success',
+            message: 'Successfully logged out'
+        });
+    } catch (error) {
+        next(error);
+    }
+};
 }

@@ -1,6 +1,7 @@
 import { PrismaClient, Prisma } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import { v4 as uuid } from 'uuid';
 import { config } from '../config';
 import { auditLog, logger } from '../lib/logging/logger';
 import {
@@ -8,8 +9,10 @@ import {
   RegisterData,
   AuthResponse,
   JwtPayload,
+  PasswordReset,
 } from '../interfaces/auth.interface';
 import { AppError } from '../middleware/error.handler';
+import crypto from 'crypto';
 
 export class AuthService {
   private prisma: PrismaClient;
@@ -68,6 +71,7 @@ export class AuthService {
       // Hash password
       const hashedPassword = await this.hashPassword(data.password);
       try {
+        const sessionId = uuid();
         const employee = await this.prisma.employee.create({
           data: {
             email: data.email.toLowerCase(),
@@ -119,6 +123,7 @@ export class AuthService {
             roles: employee.roles.map((r) => r.role.name),
           },
           token,
+          sessionId
         };
       } catch (error) {
         logger.error('Error creating employee:', error);
@@ -157,9 +162,27 @@ export class AuthService {
       throw new AppError(401, 'Invalid credentials');
     }
 
+    const sessionId = uuid();
+
+    await this.prisma.employee.updateMany({
+      where: {
+          id: employee.id,
+          NOT: {
+              sessionId: sessionId
+          }
+      },
+      data: {
+          sessionId: null
+      }
+  });
+
     await this.prisma.employee.update({
       where: { id: employee.id },
-      data: { lastLogin: new Date() },
+      data: {
+        lastLogin: new Date(),
+        lastLoginIP: credentials.ip,
+        sessionId: sessionId,
+      },
     });
 
     const token = this.generateToken({
@@ -185,6 +208,71 @@ export class AuthService {
         roles: employee.roles.map((r) => r.role.name),
       },
       token,
+      sessionId,
     };
   }
+
+  public async requestPasswordReset(email: string): Promise<void> {
+    const employee = await this.prisma.employee.findUnique({
+      where: { email: email.toLowerCase() },
+    });
+
+    if (employee) {
+      const resetToken = crypto.randomBytes(32).toString('hex');
+      const resetTokenExpiry = new Date(Date.now() + 3600000); // 1 hour
+
+      await this.prisma.employee.update({
+        where: { id: employee.id },
+        data: {
+          resetPasswordToken: resetToken,
+          resetPasswordExpires: resetTokenExpiry,
+        },
+      });
+
+      // TODO: Send email with reset token
+      logger.info(`Password reset requested for ${email}`);
+    }
+  }
+
+  public async resetPassword(data: PasswordReset): Promise<void> {
+    const employee = await this.prisma.employee.findFirst({
+      where: {
+        resetPasswordToken: data.token,
+        resetPasswordExpires: { gt: new Date() },
+      },
+    });
+
+    if (!employee) {
+      throw new AppError(400, 'Invalid or expired reset token');
+    }
+
+    const hashedPassword = await this.hashPassword(data.password);
+
+    await this.prisma.employee.update({
+      where: { id: employee.id },
+      data: {
+        password: hashedPassword,
+        resetPasswordToken: null,
+        resetPasswordExpires: null,
+      },
+    });
+  }
+
+  public async logout(userId: string): Promise<void> {
+    await this.prisma.employee.update({
+        where: { id: userId },
+        data: {
+            sessionId: null,
+        }
+    });
+
+    await auditLog(
+        'LOGOUT',
+        {
+            entityID: userId,
+            action: 'User logged out'
+        },
+        userId
+    );
+}
 }
