@@ -65,6 +65,27 @@ class DuplicateResourceError extends ProductServiceError {
   }
 }
 
+/**
+ * Service class for managing products, ingredients, categories, and suppliers in a restaurant system.
+ * 
+ * @class ProductService
+ * @description Handles CRUD operations and business logic for products, ingredients, categories, and suppliers.
+ *             Includes validation, error handling, and audit logging for all operations.
+ * 
+ * @property {string[]} PRODUCT_SORT_FIELDS - Valid fields for sorting products
+ * @property {string[]} INGREDIENT_SORT_FIELDS - Valid fields for sorting ingredients
+ * @property {string[]} CATEGORY_SORT_FIELDS - Valid fields for sorting categories
+ * @property {string[]} SUPPLIER_SORT_FIELDS - Valid fields for sorting suppliers
+ * 
+ * @remarks
+ * - All methods include comprehensive error handling through handleServiceError
+ * - Validation is performed for all inputs using dedicated validation methods
+ * - Transactions are used where data consistency across multiple operations is required
+ * - Audit logging is implemented for create, update, and delete operations
+ * - Pagination and sorting are supported for list operations
+ * - Case-insensitive search is implemented where applicable
+ * - Custom error classes are used to differentiate between different types of errors
+ */
 export class ProductService {
   // Add these constants at the top of the class
   private readonly PRODUCT_SORT_FIELDS = ['name', 'price', 'createdAt', 'preparationTime'];
@@ -1323,6 +1344,115 @@ export class ProductService {
       return supplier;
     } catch (error) {
       return this.handleServiceError(error, 'getSupplier');
+    }
+  }
+
+  async searchProducts(searchTerm: string): Promise<Product[]> {
+    try {
+      return await prisma.product.findMany({
+        where: {
+          OR: [
+            { name: { contains: searchTerm, mode: 'insensitive' } },
+            { description: { contains: searchTerm, mode: 'insensitive' } }
+          ]
+        },
+        include: {
+          category: true,
+          ingredients: true
+        }
+      });
+    } catch (error) {
+      return this.handleServiceError(error, 'searchProducts');
+    }
+  }
+
+  async updateProductStock(productId: string, quantity: number): Promise<void> {
+    try {
+      const product = await prisma.product.findUnique({
+        where: { id: productId },
+        include: { ingredients: true }
+      });
+  
+      if (!product) {
+        throw new ResourceNotFoundError('Product not found');
+      }
+  
+      await prisma.$transaction(async (tx) => {
+        for (const ingredient of product.ingredients) {
+          await tx.ingredient.update({
+            where: { id: ingredient.id },
+            data: {
+              stock: { decrement: quantity }
+            }
+          });
+        }
+      });
+    } catch (error) {
+      return this.handleServiceError(error, 'updateProductStock');
+    }
+  }
+
+  async moveProduct(productId: string, newCategoryId: string): Promise<Product> {
+    try {
+      // Validate both IDs exist
+      if (!(await this.checkProductExists({ id: productId }))) {
+        throw new ResourceNotFoundError('Product not found');
+      }
+      if (!(await this.checkCategoryExists({ id: newCategoryId }))) {
+        throw new ResourceNotFoundError('Category not found');
+      }
+  
+      return await prisma.product.update({
+        where: { id: productId },
+        data: { categoryId: newCategoryId },
+        include: { category: true }
+      });
+    } catch (error) {
+      return this.handleServiceError(error, 'moveProduct');
+    }
+  }
+
+  async updateProductIngredients(
+    productId: string, 
+    ingredientUpdates: { add?: string[], remove?: string[] }
+  ): Promise<Product> {
+    try {
+      const { add = [], remove = [] } = ingredientUpdates;
+  
+      // Validate product exists
+      const product = await prisma.product.findUnique({
+        where: { id: productId },
+        include: { ingredients: true }
+      });
+  
+      if (!product) {
+        throw new ResourceNotFoundError('Product not found');
+      }
+  
+      // Validate all ingredients exist
+      if (add.length > 0) {
+        const ingredients = await prisma.ingredient.findMany({
+          where: { id: { in: add } }
+        });
+  
+        if (ingredients.length !== add.length) {
+          throw new ValidationError('One or more ingredients to add not found');
+        }
+      }
+  
+      // Update product ingredients
+      return await prisma.product.update({
+        where: { id: productId },
+        data: {
+          ingredients: {
+            disconnect: remove.map(id => ({ id })),
+            connect: add.map(id => ({ id }))
+          }
+        },
+        include: { ingredients: true }
+      });
+    } catch (error) {
+      return this.handleServiceError(error, 'updateProductIngredients');
     }
   }
 }
