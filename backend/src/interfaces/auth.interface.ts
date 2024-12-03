@@ -56,3 +56,10 @@ export interface PasswordResetVerify {
   token: string;
   newPassword: string;
 }
+
+export interface PaginationQuery {
+  page?: string;
+  limit?: string;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+}

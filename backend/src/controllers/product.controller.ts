@@ -1,6 +1,8 @@
 import { Request as ExpressRequest, Response } from 'express';
 import { ProductService } from '../services/product.service';
 import { logger } from '../lib/logging/logger';
+import { CategoryFilterOptions, IngredientFilterOptions, PaginationOptions, ProductFilterOptions, SupplierFilterOptions } from '../interfaces/product.interface';
+import { IngredientCategory } from '@prisma/client';
 
 interface AuthenticatedRequest extends ExpressRequest {
   user?: {
@@ -35,7 +37,24 @@ export class ProductController {
   // Product Endpoints
   public getProducts = async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const products = await this.productService.getProducts();
+      // Extract pagination from query params
+      const pagination: PaginationOptions = {
+        page: req.query.page ? parseInt(req.query.page as string) : 1,
+        limit: req.query.limit ? parseInt(req.query.limit as string) : 10,
+        sortBy: req.query.sortBy as string,
+        sortOrder: req.query.sortOrder as 'asc' | 'desc'
+      };
+  
+      // Extract filters from query params
+      const filters: ProductFilterOptions = {
+        search: req.query.search as string,
+        isAvailable: req.query.isAvailable === 'true',
+        minPrice: req.query.minPrice ? parseFloat(req.query.minPrice as string) : undefined,
+        maxPrice: req.query.maxPrice ? parseFloat(req.query.maxPrice as string) : undefined,
+        categoryId: req.query.categoryId as string
+      };
+  
+      const products = await this.productService.getProducts(pagination, filters);
       res.json(products);
     } catch (error) {
       this.handleError(error, res);
@@ -109,7 +128,20 @@ export class ProductController {
   // Category Endpoints
   public getCategories = async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const categories = await this.productService?.getCategories();
+      const pagination: PaginationOptions = {
+        page: req.query.page ? parseInt(req.query.page as string) : 1,
+        limit: req.query.limit ? parseInt(req.query.limit as string) : 10,
+        sortBy: req.query.sortBy as string,
+        sortOrder: req.query.sortOrder as 'asc' | 'desc'
+      };
+  
+      const filters: CategoryFilterOptions = {
+        search: req.query.search as string,
+        isActive: req.query.isActive === 'true',
+        parentId: req.query.parentId as string
+      };
+  
+      const categories = await this.productService.getCategories(pagination, filters);
       res.json(categories);
     } catch (error) {
       this.handleError(error, res);
@@ -187,7 +219,22 @@ export class ProductController {
   // Ingredient Endpoints
   public getIngredients = async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const ingredients = await this.productService.getIngredients();
+      const pagination: PaginationOptions = {
+        page: req.query.page ? parseInt(req.query.page as string) : 1,
+        limit: req.query.limit ? parseInt(req.query.limit as string) : 10,
+        sortBy: req.query.sortBy as string,
+        sortOrder: req.query.sortOrder as 'asc' | 'desc'
+      };
+  
+      const filters: IngredientFilterOptions = {
+        search: req.query.search as string,
+        category: req.query.category as IngredientCategory,
+        supplierId: req.query.supplierId as string,
+        isExtra: req.query.isExtra === 'true',
+        minStock: req.query.minStock ? parseInt(req.query.minStock as string) : undefined
+      };
+  
+      const ingredients = await this.productService.getIngredients(pagination, filters);
       res.json(ingredients);
     } catch (error) {
       this.handleError(error, res);
@@ -254,7 +301,19 @@ export class ProductController {
   // Supplier Endpoints
   public getSuppliers = async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const suppliers = await this.productService.getSuppliers();
+      const pagination: PaginationOptions = {
+        page: req.query.page ? parseInt(req.query.page as string) : 1,
+        limit: req.query.limit ? parseInt(req.query.limit as string) : 10,
+        sortBy: req.query.sortBy as string,
+        sortOrder: req.query.sortOrder as 'asc' | 'desc'
+      };
+  
+      const filters: SupplierFilterOptions = {
+        search: req.query.search as string,
+        hasIngredients: req.query.hasIngredients === 'true'
+      };
+  
+      const suppliers = await this.productService.getSuppliers(pagination, filters);
       res.json(suppliers);
     } catch (error) {
       this.handleError(error, res);
