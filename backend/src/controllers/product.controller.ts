@@ -56,9 +56,15 @@ export class ProductController {
 
   public createProduct = async (req: AuthenticatedRequest, res: Response) => {
     try {
+      if (!req.user?.id) {
+        return res.status(401).json({
+          status: 'error',
+          message: 'Authentication required'
+        });
+      }
       const product = await this.productService.createProduct({
         ...req.body,
-        user: req.user?.id,
+        user: req.user.id
       });
       res.status(201).json(product);
     } catch (error) {
@@ -68,9 +74,15 @@ export class ProductController {
 
   public updateProduct = async (req: AuthenticatedRequest, res: Response) => {
     try {
+      if (!req.user?.id) {
+        return res.status(401).json({
+          status: 'error',
+          message: 'Authentication required'
+        });
+      }
       const product = await this.productService.updateProduct(req.params.id, {
         ...req.body,
-        user: req.user?.id,
+        user: req.user.id
       });
       res.json(product);
     } catch (error) {
@@ -116,45 +128,57 @@ public getCategory = async (req: AuthenticatedRequest, res: Response): Promise<v
   }
 };
 
-  public createCategory = async (req: AuthenticatedRequest, res: Response) => {
-    try {
-      const category = await this.productService.createCategory(
-        {
-          ...req.body,
-          user: req.user?.id,
-        },
-        req.body.newParentCategory || false
-      );
-      res.status(201).json(category);
-    } catch (error) {
-      this.handleError(error, res);
+public createCategory = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    if (!req.user?.id) {
+      return res.status(401).json({
+        status: 'error',
+        message: 'Authentication required'
+      });
     }
-  };
+    const category = await this.productService.createCategory(
+      {
+        ...req.body,
+        user: req.user.id
+      },
+      req.body.newParentCategory || false
+    );
+    res.status(201).json(category);
+  } catch (error) {
+    this.handleError(error, res);
+  }
+};
 
-  public updateCategory = async (req: AuthenticatedRequest, res: Response) => {
-    try {
-      const category = await this.productService.updateCategory(
-        req.params.id,
-        { ...req.body, user: req.user?.id },
-        req.body.newParentCategory || false
-      );
-      res.json(category);
-    } catch (error) {
-      this.handleError(error, res);
+public updateCategory = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    if (!req.user?.id) {
+      return res.status(401).json({
+        status: 'error',
+        message: 'Authentication required'
+      });
     }
-  };
+    const category = await this.productService.updateCategory(
+      req.params.id,
+      { ...req.body, user: req.user.id },
+      req.body.newParentCategory || false
+    );
+    res.json(category);
+  } catch (error) {
+    this.handleError(error, res);
+  }
+};
 
   public deleteCategory = async (req: AuthenticatedRequest, res: Response) => {
     try {
       if (!req.user?.id) {
-        return res.status(401).json({ 
-          status: 'error', 
-          message: 'Authentication required' 
+        return res.status(401).json({
+          status: 'error',
+          message: 'Authentication required'
         });
       }
-      
+  
       await this.productService.deleteCategory(req.params.id, req.user.id);
-      res.status(204).send();
+      return res.status(204).send();
     } catch (error) {
       this.handleError(error, res);
     }
@@ -184,9 +208,15 @@ public getCategory = async (req: AuthenticatedRequest, res: Response): Promise<v
 
   public createIngredient = async (req: AuthenticatedRequest, res: Response) => {
     try {
+      if (!req.user?.id) {
+        return res.status(401).json({
+          status: 'error',
+          message: 'Authentication required'
+        });
+      }
       const ingredient = await this.productService.createIngredient({
         ...req.body,
-        user: req.user?.id,
+        user: req.user.id
       });
       res.status(201).json(ingredient);
     } catch (error) {
@@ -196,9 +226,15 @@ public getCategory = async (req: AuthenticatedRequest, res: Response): Promise<v
 
   public updateIngredient = async (req: AuthenticatedRequest, res: Response) => {
     try {
+      if (!req.user?.id) {
+        return res.status(401).json({
+          status: 'error',
+          message: 'Authentication required'
+        });
+      }
       const ingredient = await this.productService.updateIngredient(req.params.id, {
         ...req.body,
-        user: req.user?.id,
+        user: req.user.id
       });
       res.json(ingredient);
     } catch (error) {
@@ -227,9 +263,15 @@ public getCategory = async (req: AuthenticatedRequest, res: Response): Promise<v
 
   public createSupplier = async (req: AuthenticatedRequest, res: Response) => {
     try {
+      if (!req.user?.id) {
+        return res.status(401).json({
+          status: 'error',
+          message: 'Authentication required'
+        });
+      }
       const supplier = await this.productService.createSupplier({
         ...req.body,
-        user: req.user?.id,
+        user: req.user.id
       });
       res.status(201).json(supplier);
     } catch (error) {
@@ -239,9 +281,15 @@ public getCategory = async (req: AuthenticatedRequest, res: Response): Promise<v
 
   public updateSupplier = async (req: AuthenticatedRequest, res: Response) => {
     try {
+      if (!req.user?.id) {
+        return res.status(401).json({
+          status: 'error',
+          message: 'Authentication required'
+        });
+      }
       const supplier = await this.productService.updateSupplier(req.params.id, {
         ...req.body,
-        user: req.user?.id,
+        user: req.user.id
       });
       res.json(supplier);
     } catch (error) {
