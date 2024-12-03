@@ -431,33 +431,58 @@ export class ProductService {
   async updateIngredient(id: string, data: CreateIngredientInput): Promise<Ingredient> {
     try {
       this.validateUpdateIngredient(id, data);
-      const ingredient = await prisma.ingredient.update({
-        where: { id },
-        data: {
-          name: data.name,
-          description: data.description,
-          stock: data.stock,
-          unit: data.unit as MeasurementUnit,
-          category: data.category as IngredientCategory,
-          reorderPoint: data.reorderPoint,
-          reorderAmount: new Decimal(data.reorderAmount || 0),
-          cost: data.cost,
-          isExtra: data.isExtra,
-          extraPrice: data.extraPrice,
-          supplierId: data.supplierId,
-        },
+  
+      return await prisma.$transaction(async (tx) => {
+        // Check ingredient exists
+        const existingIngredient = await tx.ingredient.findUnique({ 
+          where: { id },
+          include: { products: true }
+        });
+  
+        if (!existingIngredient) {
+          throw new ResourceNotFoundError('Ingredient not found');
+        }
+  
+        // Check name duplicates
+        const duplicateName = await tx.ingredient.findFirst({
+          where: {
+            name: data.name,
+            id: { not: id }
+          }
+        });
+  
+        if (duplicateName) {
+          throw new DuplicateResourceError('Ingredient name already exists');
+        }
+  
+        const ingredient = await tx.ingredient.update({
+          where: { id },
+          data: {
+            name: data.name,
+            description: data.description,
+            stock: data.stock,
+            unit: data.unit as MeasurementUnit,
+            category: data.category as IngredientCategory,
+            reorderPoint: data.reorderPoint,
+            reorderAmount: new Decimal(data.reorderAmount || 0),
+            cost: data.cost,
+            isExtra: data.isExtra,
+            extraPrice: data.extraPrice,
+            supplierId: data.supplierId,
+          },
+        });
+  
+        await auditLog(
+          'UPDATE_INGREDIENT',
+          {
+            entityName: data.name,
+            entityID: ingredient,
+          },
+          data.user || 'SYSTEM'
+        );
+  
+        return ingredient;
       });
-
-      auditLog(
-        'UPDATE INGREDIENT',
-        {
-          entityName: data.name,
-          entityID: ingredient,
-        },
-        data.user || 'SYSTEM'
-      );
-
-      return ingredient;
     } catch (error) {
       return this.handleServiceError(error, 'updateIngredient');
     }
@@ -466,20 +491,33 @@ export class ProductService {
   async deleteIngredient(id: string): Promise<void> {
     try {
       this.validateDeleteOperation(id);
-      if (!(await this.checkIngredientExists({ id })))
-        throw new ResourceNotFoundError('Ingredient with this ID does not exist');
-      const ingredient = await prisma.ingredient.delete({
-        where: { id },
+  
+      await prisma.$transaction(async (tx) => {
+        const ingredient = await tx.ingredient.findUnique({
+          where: { id },
+          include: { products: true }
+        });
+  
+        if (!ingredient) {
+          throw new ResourceNotFoundError('Ingredient not found');
+        }
+  
+        // Check if ingredient is used in any products
+        if (ingredient.products.length > 0) {
+          throw new ValidationError('Cannot delete ingredient that is used in products');
+        }
+  
+        await tx.ingredient.delete({ where: { id } });
+  
+        await auditLog(
+          'DELETE_INGREDIENT',
+          {
+            entityName: ingredient.name,
+            entityID: ingredient.id,
+          },
+          ingredient.id
+        );
       });
-
-      auditLog(
-        'DELETE INGREDIENT',
-        {
-          entityName: ingredient.name,
-          entityID: ingredient.id,
-        },
-        ingredient.id
-      );
     } catch (error) {
       return this.handleServiceError(error, 'deleteIngredient');
     }
@@ -526,77 +564,134 @@ export class ProductService {
   async createCategory(data: CreateCategoryInput, newParentCategory: boolean): Promise<Category> {
     try {
       this.validateCreateCategory(data);
-      if (await this.checkCategoryExists({ name: data.name }))
-        throw new DuplicateResourceError('Category with this name already exists');
-      let nextCategory = { displayOrder: 0 };
-      if (newParentCategory) {
-        const foundCategory = await prisma.category.findFirst({
-          orderBy: { displayOrder: 'desc' },
+  
+      return await prisma.$transaction(async (tx) => {
+        // Check duplicate name
+        const duplicateName = await tx.category.findFirst({
+          where: { name: data.name }
         });
-        nextCategory = foundCategory ? foundCategory : nextCategory;
-      }
-      const category = await prisma.category.create({
-        data: {
-          name: data.name,
-          description: data.description,
-          displayOrder: newParentCategory
-            ? (nextCategory?.displayOrder || 0) + 1
-            : data.displayOrder,
-          isActive: data.isActive,
-          parentId: data.parentId,
-        },
+  
+        if (duplicateName) {
+          throw new DuplicateResourceError('Category with this name already exists');
+        }
+  
+        // Check parent exists if specified
+        if (data.parentId) {
+          const parentExists = await tx.category.findUnique({
+            where: { id: data.parentId }
+          });
+  
+          if (!parentExists) {
+            throw new ResourceNotFoundError('Parent category not found');
+          }
+        }
+  
+        let nextOrder = data.displayOrder;
+        if (newParentCategory) {
+          const lastCategory = await tx.category.findFirst({
+            orderBy: { displayOrder: 'desc' }
+          });
+          nextOrder = (lastCategory?.displayOrder || 0) + 1;
+        }
+  
+        const category = await tx.category.create({
+          data: {
+            name: data.name,
+            description: data.description,
+            displayOrder: nextOrder,
+            isActive: data.isActive,
+            parentId: data.parentId,
+          },
+        });
+  
+        await auditLog(
+          'CREATE_CATEGORY',
+          {
+            entityName: data.name,
+            entityID: category.id,
+          },
+          data.user || 'SYSTEM'
+        );
+  
+        return category;
       });
-      auditLog(
-        'CREATE CATEGORY',
-        {
-          entityName: data.name,
-          entityID: category.id,
-        },
-        data.user || 'SYSTEM'
-      );
-      return category;
     } catch (error) {
       return this.handleServiceError(error, 'createCategory');
     }
   }
 
-  async updateCategory(
-    id: string,
-    data: CreateCategoryInput,
-    newParentCategory: boolean
-  ): Promise<Category> {
+  async updateCategory(id: string, data: CreateCategoryInput, newParentCategory: boolean): Promise<Category> {
     try {
       this.validateUpdateCategory(id, data);
-      if (await this.checkCategoryExists({ name: data.name }))
-        throw new DuplicateResourceError('Category with this name already exists');
-      let nextCategory = { displayOrder: 0 };
-      if (newParentCategory) {
-        const foundCategory = await prisma.category.findFirst({
-          orderBy: { displayOrder: 'desc' },
+  
+      return await prisma.$transaction(async (tx) => {
+        // Check category exists
+        const existingCategory = await tx.category.findUnique({
+          where: { id },
+          include: { children: true }
         });
-        nextCategory = foundCategory ? foundCategory : nextCategory;
-      }
-      const category = await prisma.category.update({
-        where: { id },
-        data: {
-          name: data.name,
-          description: data.description,
-          displayOrder: newParentCategory
-            ? (nextCategory?.displayOrder || 0) + 1
-            : data.displayOrder,
-          isActive: data.isActive,
-          parentId: data.parentId,
-        },
+  
+        if (!existingCategory) {
+          throw new ResourceNotFoundError('Category not found');
+        }
+  
+        // Check duplicate name (excluding current category)
+        const duplicateName = await tx.category.findFirst({
+          where: {
+            name: data.name,
+            id: { not: id }
+          }
+        });
+  
+        if (duplicateName) {
+          throw new DuplicateResourceError('Category with this name already exists');
+        }
+  
+        // Check for circular reference
+        if (data.parentId) {
+          if (data.parentId === id) {
+            throw new ValidationError('Category cannot be its own parent');
+          }
+  
+          const parent = await tx.category.findUnique({
+            where: { id: data.parentId }
+          });
+  
+          if (!parent) {
+            throw new ResourceNotFoundError('Parent category not found');
+          }
+        }
+  
+        let nextOrder = data.displayOrder;
+        if (newParentCategory) {
+          const lastCategory = await tx.category.findFirst({
+            orderBy: { displayOrder: 'desc' }
+          });
+          nextOrder = (lastCategory?.displayOrder || 0) + 1;
+        }
+  
+        const category = await tx.category.update({
+          where: { id },
+          data: {
+            name: data.name,
+            description: data.description,
+            displayOrder: nextOrder,
+            isActive: data.isActive,
+            parentId: data.parentId,
+          },
+        });
+  
+        await auditLog(
+          'UPDATE_CATEGORY',
+          {
+            entityName: data.name,
+            entityID: category,
+          },
+          data.user || 'SYSTEM'
+        );
+  
+        return category;
       });
-      auditLog(
-        'UPDATE CATEGORY',
-        {
-          entityName: data.name,
-          entityID: category,
-        },
-        data.user || 'SYSTEM'
-      );
-      return category;
     } catch (error) {
       return this.handleServiceError(error, 'updateCategory');
     }
@@ -605,17 +700,36 @@ export class ProductService {
   async deleteCategory(id: string, user: string): Promise<void> {
     try {
       this.validateDeleteOperation(id);
-      if (!(await this.checkCategoryExists({ id })))
-        throw new ResourceNotFoundError('Category with this ID does not exist');
-      const category = await prisma.category.delete({ where: { id } });
-      auditLog(
-        'DELETE CATEGORY',
-        {
-          entityName: category.name,
-          entityID: category.id,
-        },
-        user
-      );
+  
+      await prisma.$transaction(async (tx) => {
+        const category = await tx.category.findUnique({
+          where: { id },
+          include: { children: true, products: true }
+        });
+  
+        if (!category) {
+          throw new ResourceNotFoundError('Category not found');
+        }
+  
+        if (category.children.length > 0) {
+          throw new ValidationError('Cannot delete category with child categories');
+        }
+  
+        if (category.products.length > 0) {
+          throw new ValidationError('Cannot delete category with associated products');
+        }
+  
+        await tx.category.delete({ where: { id } });
+  
+        await auditLog(
+          'DELETE_CATEGORY',
+          {
+            entityName: category.name,
+            entityID: id,
+          },
+          user
+        );
+      });
     } catch (error) {
       return this.handleServiceError(error, 'deleteCategory');
     }
@@ -651,36 +765,60 @@ export class ProductService {
   async createProduct(data: CreateProductInput): Promise<Product> {
     try {
       this.validateCreateProduct(data);
-      if (await this.checkCategoryExists({ name: data.name }))
-        throw new DuplicateResourceError('Category with this name already exists');
-      if (await this.checkIngredientExists({ name: data.name }))
-        throw new DuplicateResourceError('Ingredient with this name already exists');
-      const product = await prisma.product.create({
-        data: {
-          name: data.name,
-          description: data.description || null,
-          price: new Decimal(data.price),
-          categoryId: data.categoryId,
-          image: data.image || null,
-          isAvailable: data.isAvailable,
-          preparationTime: data.preparationTime || 15,
-          allergens: data.allergens || [],
-          freeExtras: data.freeExtras || 0,
-          freeExtraItems: Array.isArray(data.freeExtrasCategory) ? data.freeExtrasCategory : [],
-          ingredients: {
-            connect: data.ingredients.map((ingredient) => ({ id: ingredient })),
+  
+      return await prisma.$transaction(async (tx) => {
+        // Check duplicates within transaction
+        const existingProduct = await tx.product.findFirst({
+          where: {
+            OR: [
+              { name: data.name },
+              { name: { equals: data.name, mode: 'insensitive' } }
+            ]
+          }
+        });
+  
+        if (existingProduct) {
+          throw new DuplicateResourceError('Product with this name already exists');
+        }
+  
+        // Check if all ingredients exist
+        const ingredients = await tx.ingredient.findMany({
+          where: { id: { in: data.ingredients } }
+        });
+  
+        if (ingredients.length !== data.ingredients.length) {
+          throw new ResourceNotFoundError('One or more ingredients not found');
+        }
+  
+        const product = await tx.product.create({
+          data: {
+            name: data.name,
+            description: data.description || null,
+            price: new Decimal(data.price),
+            categoryId: data.categoryId,
+            image: data.image || null,
+            isAvailable: data.isAvailable,
+            preparationTime: data.preparationTime || 15,
+            allergens: data.allergens || [],
+            freeExtras: data.freeExtras || 0,
+            freeExtraItems: Array.isArray(data.freeExtrasCategory) ? data.freeExtrasCategory : [],
+            ingredients: {
+              connect: data.ingredients.map((ingredient) => ({ id: ingredient })),
+            },
           },
-        },
+        });
+  
+        await auditLog(
+          'CREATE_PRODUCT',
+          {
+            entityName: data.name,
+            entityID: product.id,
+          },
+          data.user || 'SYSTEM'
+        );
+  
+        return product;
       });
-      auditLog(
-        'CREATE PRODUCT',
-        {
-          entityName: data.name,
-          entityID: product.id,
-        },
-        data.user || 'SYSTEM'
-      );
-      return product;
     } catch (error) {
       return this.handleServiceError(error, 'createProduct');
     }
@@ -689,39 +827,69 @@ export class ProductService {
   async updateProduct(id: string, data: CreateProductInput): Promise<Product> {
     try {
       this.validateUpdateProduct(id, data);
-      if (await this.checkCategoryExists({ name: data.name })) {
-        throw new DuplicateResourceError('Category with this name already exists');
-      }
-      if (await this.checkIngredientExists({ name: data.name })) {
-        throw new DuplicateResourceError('Ingredient with this name already exists');
-      }
-      const product = await prisma.product.update({
-        where: { id },
-        data: {
-          name: data.name,
-          description: data.description || null,
-          price: new Decimal(data.price),
-          categoryId: data.categoryId,
-          image: data.image || null,
-          isAvailable: data.isAvailable,
-          preparationTime: data.preparationTime || 15,
-          allergens: data.allergens || [],
-          freeExtras: data.freeExtras || 0,
-          freeExtraItems: Array.isArray(data.freeExtrasCategory) ? data.freeExtrasCategory : [],
-          ingredients: {
-            set: data.ingredients.map((ingredient) => ({ id: ingredient })),
+  
+      return await prisma.$transaction(async (tx) => {
+        // Check product exists
+        const existingProduct = await tx.product.findUnique({ 
+          where: { id },
+          include: { ingredients: true }
+        });
+  
+        if (!existingProduct) {
+          throw new ResourceNotFoundError('Product not found');
+        }
+  
+        // Check name duplicates (excluding current product)
+        const duplicateName = await tx.product.findFirst({
+          where: {
+            name: data.name,
+            id: { not: id }
+          }
+        });
+  
+        if (duplicateName) {
+          throw new DuplicateResourceError('Product name already exists');
+        }
+  
+        // Verify all ingredients exist
+        const ingredients = await tx.ingredient.findMany({
+          where: { id: { in: data.ingredients } }
+        });
+  
+        if (ingredients.length !== data.ingredients.length) {
+          throw new ResourceNotFoundError('One or more ingredients not found');
+        }
+  
+        const product = await tx.product.update({
+          where: { id },
+          data: {
+            name: data.name,
+            description: data.description || null,
+            price: new Decimal(data.price),
+            categoryId: data.categoryId,
+            image: data.image || null,
+            isAvailable: data.isAvailable,
+            preparationTime: data.preparationTime || 15,
+            allergens: data.allergens || [],
+            freeExtras: data.freeExtras || 0,
+            freeExtraItems: Array.isArray(data.freeExtrasCategory) ? data.freeExtrasCategory : [],
+            ingredients: {
+              set: data.ingredients.map((ingredient) => ({ id: ingredient })),
+            },
           },
-        },
+        });
+  
+        await auditLog(
+          'UPDATE_PRODUCT',
+          {
+            entityName: data.name,
+            entityID: product,
+          },
+          data.user || 'SYSTEM'
+        );
+  
+        return product;
       });
-      auditLog(
-        'UPDATE PRODUCT',
-        {
-          entityName: data.name,
-          entityID: product,
-        },
-        data.user || 'SYSTEM'
-      );
-      return product;
     } catch (error) {
       return this.handleServiceError(error, 'updateProduct');
     }
@@ -730,20 +898,39 @@ export class ProductService {
   async deleteProduct(id: string, user: string): Promise<void> {
     try {
       this.validateDeleteOperation(id);
-      if (!(await this.checkIngredientExists({ id }))) {
-        throw new ResourceNotFoundError('Ingredient with this ID does not exist');
-      }
-      const product = await prisma.product.delete({
-        where: { id },
+  
+      await prisma.$transaction(async (tx) => {
+        const product = await tx.product.findUnique({
+          where: { id },
+          include: { ingredients: true }
+        });
+  
+        if (!product) {
+          throw new ResourceNotFoundError('Product not found');
+        }
+  
+        // First disconnect ingredients
+        await tx.product.update({
+          where: { id },
+          data: {
+            ingredients: {
+              set: [], // Disconnect all ingredients
+            }
+          }
+        });
+  
+        // Then delete the product
+        await tx.product.delete({ where: { id } });
+  
+        await auditLog(
+          'DELETE_PRODUCT',
+          {
+            entityName: product.name,
+            entityID: id,
+          },
+          user || 'SYSTEM'
+        );
       });
-      auditLog(
-        'DELETE PRODUCT',
-        {
-          entityName: product.name,
-          entityID: product.id,
-        },
-        user || 'SYSTEM'
-      );
     } catch (error) {
       return this.handleServiceError(error, 'deleteProduct');
     }
