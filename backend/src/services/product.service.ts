@@ -10,10 +10,16 @@ import {
 } from '@prisma/client';
 import { logger } from '../lib/logging/logger';
 import {
+  CategoryFilterOptions,
   CreateCategoryInput,
   CreateIngredientInput,
   CreateProductInput,
   CreateSupplierInput,
+  IngredientFilterOptions,
+  PaginatedResponse,
+  PaginationOptions,
+  ProductFilterOptions,
+  SupplierFilterOptions,
 } from '../interfaces/product.interface';
 import { auditLog } from '../lib/logging/logger';
 import { Decimal } from '@prisma/client/runtime/library';
@@ -60,6 +66,35 @@ class DuplicateResourceError extends ProductServiceError {
 }
 
 export class ProductService {
+  // Add these constants at the top of the class
+  private readonly PRODUCT_SORT_FIELDS = ['name', 'price', 'createdAt', 'preparationTime'];
+  private readonly INGREDIENT_SORT_FIELDS = ['name', 'stock', 'createdAt', 'cost'];
+  private readonly CATEGORY_SORT_FIELDS = ['name', 'displayOrder', 'createdAt'];
+  private readonly SUPPLIER_SORT_FIELDS = ['name', 'createdAt', 'email'];
+
+  private validatePaginationAndSorting(
+    pagination: PaginationOptions,
+    allowedSortFields: string[]
+  ): void {
+    const { page, limit, sortBy, sortOrder } = pagination;
+
+    if (page !== undefined && (page < 1 || !Number.isInteger(page))) {
+      throw new ValidationError('Page must be a positive integer');
+    }
+
+    if (limit !== undefined && (limit < 1 || !Number.isInteger(limit))) {
+      throw new ValidationError('Limit must be a positive integer');
+    }
+
+    if (sortBy && !allowedSortFields.includes(sortBy)) {
+      throw new ValidationError(`Sort field must be one of: ${allowedSortFields.join(', ')}`);
+    }
+
+    if (sortOrder && !['asc', 'desc'].includes(sortOrder)) {
+      throw new ValidationError('Sort order must be either "asc" or "desc"');
+    }
+  }
+
   private handleServiceError(error: unknown, context: string): never {
     logger.error(`Error in ProductService.${context}:`, {
       error,
@@ -431,30 +466,30 @@ export class ProductService {
   async updateIngredient(id: string, data: CreateIngredientInput): Promise<Ingredient> {
     try {
       this.validateUpdateIngredient(id, data);
-  
+
       return await prisma.$transaction(async (tx) => {
         // Check ingredient exists
-        const existingIngredient = await tx.ingredient.findUnique({ 
+        const existingIngredient = await tx.ingredient.findUnique({
           where: { id },
-          include: { products: true }
+          include: { products: true },
         });
-  
+
         if (!existingIngredient) {
           throw new ResourceNotFoundError('Ingredient not found');
         }
-  
+
         // Check name duplicates
         const duplicateName = await tx.ingredient.findFirst({
           where: {
             name: data.name,
-            id: { not: id }
-          }
+            id: { not: id },
+          },
         });
-  
+
         if (duplicateName) {
           throw new DuplicateResourceError('Ingredient name already exists');
         }
-  
+
         const ingredient = await tx.ingredient.update({
           where: { id },
           data: {
@@ -471,7 +506,7 @@ export class ProductService {
             supplierId: data.supplierId,
           },
         });
-  
+
         await auditLog(
           'UPDATE_INGREDIENT',
           {
@@ -480,7 +515,7 @@ export class ProductService {
           },
           data.user || 'SYSTEM'
         );
-  
+
         return ingredient;
       });
     } catch (error) {
@@ -491,24 +526,24 @@ export class ProductService {
   async deleteIngredient(id: string): Promise<void> {
     try {
       this.validateDeleteOperation(id);
-  
+
       await prisma.$transaction(async (tx) => {
         const ingredient = await tx.ingredient.findUnique({
           where: { id },
-          include: { products: true }
+          include: { products: true },
         });
-  
+
         if (!ingredient) {
           throw new ResourceNotFoundError('Ingredient not found');
         }
-  
+
         // Check if ingredient is used in any products
         if (ingredient.products.length > 0) {
           throw new ValidationError('Cannot delete ingredient that is used in products');
         }
-  
+
         await tx.ingredient.delete({ where: { id } });
-  
+
         await auditLog(
           'DELETE_INGREDIENT',
           {
@@ -523,9 +558,64 @@ export class ProductService {
     }
   }
 
-  async getIngredients(): Promise<Ingredient[]> {
+  async getIngredients(
+    pagination: PaginationOptions = {},
+    filters: IngredientFilterOptions = {}
+  ): Promise<PaginatedResponse<Ingredient>> {
     try {
-      return await prisma.ingredient.findMany();
+      this.validatePaginationAndSorting(pagination, this.INGREDIENT_SORT_FIELDS);
+      const { page = 1, limit = 10, sortBy = 'createdAt', sortOrder = 'desc' } = pagination;
+
+      const skip = (page - 1) * limit;
+
+      // Build where clause based on filters
+      const where: Prisma.IngredientWhereInput = {};
+
+      if (filters.search) {
+        where.OR = [
+          { name: { contains: filters.search, mode: 'insensitive' } },
+          { description: { contains: filters.search, mode: 'insensitive' } },
+        ];
+      }
+
+      if (filters.category) {
+        where.category = filters.category;
+      }
+
+      if (filters.supplierId) {
+        where.supplierId = filters.supplierId;
+      }
+
+      if (typeof filters.isExtra === 'boolean') {
+        where.isExtra = filters.isExtra;
+      }
+
+      if (filters.minStock) {
+        where.stock = { gte: filters.minStock };
+      }
+
+      const [data, total] = await prisma.$transaction([
+        prisma.ingredient.findMany({
+          where,
+          skip,
+          take: limit,
+          orderBy: { [sortBy]: sortOrder },
+          include: {
+            supplier: true,
+          },
+        }),
+        prisma.ingredient.count({ where }),
+      ]);
+
+      const totalPages = Math.ceil(total / limit);
+
+      return {
+        data,
+        total,
+        page,
+        totalPages,
+        hasMore: page < totalPages,
+      };
     } catch (error) {
       return this.handleServiceError(error, 'getIngredients');
     }
@@ -542,9 +632,63 @@ export class ProductService {
     }
   }
 
-  async getCategories(): Promise<Category[]> {
+  async getCategories(
+    pagination: PaginationOptions = {},
+    filters: CategoryFilterOptions = {}
+  ): Promise<PaginatedResponse<Category>> {
     try {
-      return await prisma.category.findMany();
+      this.validatePaginationAndSorting(pagination, this.CATEGORY_SORT_FIELDS);
+      const { page = 1, limit = 10, sortBy = 'displayOrder', sortOrder = 'asc' } = pagination;
+
+      const skip = (page - 1) * limit;
+
+      // Build where clause based on filters
+      const where: Prisma.CategoryWhereInput = {};
+
+      if (filters.search) {
+        where.OR = [
+          { name: { contains: filters.search, mode: 'insensitive' } },
+          { description: { contains: filters.search, mode: 'insensitive' } },
+        ];
+      }
+
+      if (typeof filters.isActive === 'boolean') {
+        where.isActive = filters.isActive;
+      }
+
+      if (filters.parentId) {
+        where.parentId = filters.parentId;
+      }
+
+      const [data, total] = await prisma.$transaction([
+        prisma.category.findMany({
+          where,
+          skip,
+          take: limit,
+          orderBy: { [sortBy]: sortOrder },
+          include: {
+            parent: true,
+            children: true,
+            products: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+        }),
+        prisma.category.count({ where }),
+      ]);
+
+      const totalPages = Math.ceil(total / limit);
+
+      return {
+        data,
+        total,
+        page,
+        totalPages,
+        hasMore: page < totalPages,
+      };
     } catch (error) {
       return this.handleServiceError(error, 'getCategories');
     }
@@ -564,36 +708,36 @@ export class ProductService {
   async createCategory(data: CreateCategoryInput, newParentCategory: boolean): Promise<Category> {
     try {
       this.validateCreateCategory(data);
-  
+
       return await prisma.$transaction(async (tx) => {
         // Check duplicate name
         const duplicateName = await tx.category.findFirst({
-          where: { name: data.name }
+          where: { name: data.name },
         });
-  
+
         if (duplicateName) {
           throw new DuplicateResourceError('Category with this name already exists');
         }
-  
+
         // Check parent exists if specified
         if (data.parentId) {
           const parentExists = await tx.category.findUnique({
-            where: { id: data.parentId }
+            where: { id: data.parentId },
           });
-  
+
           if (!parentExists) {
             throw new ResourceNotFoundError('Parent category not found');
           }
         }
-  
+
         let nextOrder = data.displayOrder;
         if (newParentCategory) {
           const lastCategory = await tx.category.findFirst({
-            orderBy: { displayOrder: 'desc' }
+            orderBy: { displayOrder: 'desc' },
           });
           nextOrder = (lastCategory?.displayOrder || 0) + 1;
         }
-  
+
         const category = await tx.category.create({
           data: {
             name: data.name,
@@ -603,7 +747,7 @@ export class ProductService {
             parentId: data.parentId,
           },
         });
-  
+
         await auditLog(
           'CREATE_CATEGORY',
           {
@@ -612,7 +756,7 @@ export class ProductService {
           },
           data.user || 'SYSTEM'
         );
-  
+
         return category;
       });
     } catch (error) {
@@ -620,56 +764,60 @@ export class ProductService {
     }
   }
 
-  async updateCategory(id: string, data: CreateCategoryInput, newParentCategory: boolean): Promise<Category> {
+  async updateCategory(
+    id: string,
+    data: CreateCategoryInput,
+    newParentCategory: boolean
+  ): Promise<Category> {
     try {
       this.validateUpdateCategory(id, data);
-  
+
       return await prisma.$transaction(async (tx) => {
         // Check category exists
         const existingCategory = await tx.category.findUnique({
           where: { id },
-          include: { children: true }
+          include: { children: true },
         });
-  
+
         if (!existingCategory) {
           throw new ResourceNotFoundError('Category not found');
         }
-  
+
         // Check duplicate name (excluding current category)
         const duplicateName = await tx.category.findFirst({
           where: {
             name: data.name,
-            id: { not: id }
-          }
+            id: { not: id },
+          },
         });
-  
+
         if (duplicateName) {
           throw new DuplicateResourceError('Category with this name already exists');
         }
-  
+
         // Check for circular reference
         if (data.parentId) {
           if (data.parentId === id) {
             throw new ValidationError('Category cannot be its own parent');
           }
-  
+
           const parent = await tx.category.findUnique({
-            where: { id: data.parentId }
+            where: { id: data.parentId },
           });
-  
+
           if (!parent) {
             throw new ResourceNotFoundError('Parent category not found');
           }
         }
-  
+
         let nextOrder = data.displayOrder;
         if (newParentCategory) {
           const lastCategory = await tx.category.findFirst({
-            orderBy: { displayOrder: 'desc' }
+            orderBy: { displayOrder: 'desc' },
           });
           nextOrder = (lastCategory?.displayOrder || 0) + 1;
         }
-  
+
         const category = await tx.category.update({
           where: { id },
           data: {
@@ -680,7 +828,7 @@ export class ProductService {
             parentId: data.parentId,
           },
         });
-  
+
         await auditLog(
           'UPDATE_CATEGORY',
           {
@@ -689,7 +837,7 @@ export class ProductService {
           },
           data.user || 'SYSTEM'
         );
-  
+
         return category;
       });
     } catch (error) {
@@ -700,27 +848,27 @@ export class ProductService {
   async deleteCategory(id: string, user: string): Promise<void> {
     try {
       this.validateDeleteOperation(id);
-  
+
       await prisma.$transaction(async (tx) => {
         const category = await tx.category.findUnique({
           where: { id },
-          include: { children: true, products: true }
+          include: { children: true, products: true },
         });
-  
+
         if (!category) {
           throw new ResourceNotFoundError('Category not found');
         }
-  
+
         if (category.children.length > 0) {
           throw new ValidationError('Cannot delete category with child categories');
         }
-  
+
         if (category.products.length > 0) {
           throw new ValidationError('Cannot delete category with associated products');
         }
-  
+
         await tx.category.delete({ where: { id } });
-  
+
         await auditLog(
           'DELETE_CATEGORY',
           {
@@ -765,31 +913,28 @@ export class ProductService {
   async createProduct(data: CreateProductInput): Promise<Product> {
     try {
       this.validateCreateProduct(data);
-  
+
       return await prisma.$transaction(async (tx) => {
         // Check duplicates within transaction
         const existingProduct = await tx.product.findFirst({
           where: {
-            OR: [
-              { name: data.name },
-              { name: { equals: data.name, mode: 'insensitive' } }
-            ]
-          }
+            OR: [{ name: data.name }, { name: { equals: data.name, mode: 'insensitive' } }],
+          },
         });
-  
+
         if (existingProduct) {
           throw new DuplicateResourceError('Product with this name already exists');
         }
-  
+
         // Check if all ingredients exist
         const ingredients = await tx.ingredient.findMany({
-          where: { id: { in: data.ingredients } }
+          where: { id: { in: data.ingredients } },
         });
-  
+
         if (ingredients.length !== data.ingredients.length) {
           throw new ResourceNotFoundError('One or more ingredients not found');
         }
-  
+
         const product = await tx.product.create({
           data: {
             name: data.name,
@@ -807,7 +952,7 @@ export class ProductService {
             },
           },
         });
-  
+
         await auditLog(
           'CREATE_PRODUCT',
           {
@@ -816,7 +961,7 @@ export class ProductService {
           },
           data.user || 'SYSTEM'
         );
-  
+
         return product;
       });
     } catch (error) {
@@ -827,39 +972,39 @@ export class ProductService {
   async updateProduct(id: string, data: CreateProductInput): Promise<Product> {
     try {
       this.validateUpdateProduct(id, data);
-  
+
       return await prisma.$transaction(async (tx) => {
         // Check product exists
-        const existingProduct = await tx.product.findUnique({ 
+        const existingProduct = await tx.product.findUnique({
           where: { id },
-          include: { ingredients: true }
+          include: { ingredients: true },
         });
-  
+
         if (!existingProduct) {
           throw new ResourceNotFoundError('Product not found');
         }
-  
+
         // Check name duplicates (excluding current product)
         const duplicateName = await tx.product.findFirst({
           where: {
             name: data.name,
-            id: { not: id }
-          }
+            id: { not: id },
+          },
         });
-  
+
         if (duplicateName) {
           throw new DuplicateResourceError('Product name already exists');
         }
-  
+
         // Verify all ingredients exist
         const ingredients = await tx.ingredient.findMany({
-          where: { id: { in: data.ingredients } }
+          where: { id: { in: data.ingredients } },
         });
-  
+
         if (ingredients.length !== data.ingredients.length) {
           throw new ResourceNotFoundError('One or more ingredients not found');
         }
-  
+
         const product = await tx.product.update({
           where: { id },
           data: {
@@ -878,7 +1023,7 @@ export class ProductService {
             },
           },
         });
-  
+
         await auditLog(
           'UPDATE_PRODUCT',
           {
@@ -887,7 +1032,7 @@ export class ProductService {
           },
           data.user || 'SYSTEM'
         );
-  
+
         return product;
       });
     } catch (error) {
@@ -898,30 +1043,30 @@ export class ProductService {
   async deleteProduct(id: string, user: string): Promise<void> {
     try {
       this.validateDeleteOperation(id);
-  
+
       await prisma.$transaction(async (tx) => {
         const product = await tx.product.findUnique({
           where: { id },
-          include: { ingredients: true }
+          include: { ingredients: true },
         });
-  
+
         if (!product) {
           throw new ResourceNotFoundError('Product not found');
         }
-  
+
         // First disconnect ingredients
         await tx.product.update({
           where: { id },
           data: {
             ingredients: {
               set: [], // Disconnect all ingredients
-            }
-          }
+            },
+          },
         });
-  
+
         // Then delete the product
         await tx.product.delete({ where: { id } });
-  
+
         await auditLog(
           'DELETE_PRODUCT',
           {
@@ -936,9 +1081,66 @@ export class ProductService {
     }
   }
 
-  async getProducts(): Promise<Product[]> {
+  async getProducts(
+    pagination: PaginationOptions = {},
+    filters: ProductFilterOptions = {}
+  ): Promise<PaginatedResponse<Product>> {
     try {
-      return await prisma.product.findMany();
+      this.validatePaginationAndSorting(pagination, this.PRODUCT_SORT_FIELDS)
+      const { page = 1, limit = 10, sortBy = 'createdAt', sortOrder = 'desc' } = pagination;
+
+      const skip = (page - 1) * limit;
+
+      // Build where clause based on filters
+      const where: Prisma.ProductWhereInput = {};
+
+      if (filters.search) {
+        where.OR = [
+          { name: { contains: filters.search, mode: 'insensitive' } },
+          { description: { contains: filters.search, mode: 'insensitive' } },
+        ];
+      }
+
+      if (typeof filters.isAvailable === 'boolean') {
+        where.isAvailable = filters.isAvailable;
+      }
+
+      if (filters.categoryId) {
+        where.categoryId = filters.categoryId;
+      }
+
+      // Handle price filters
+      if (filters.minPrice || filters.maxPrice) {
+        where.price = {
+          ...(filters.minPrice && { gte: new Decimal(filters.minPrice) }),
+          ...(filters.maxPrice && { lte: new Decimal(filters.maxPrice) }),
+        };
+      }
+
+      // Execute query and count in parallel
+      const [data, total] = await prisma.$transaction([
+        prisma.product.findMany({
+          where,
+          skip,
+          take: limit,
+          orderBy: { [sortBy]: sortOrder },
+          include: {
+            category: true,
+            ingredients: true,
+          },
+        }),
+        prisma.product.count({ where }),
+      ]);
+
+      const totalPages = Math.ceil(total / limit);
+
+      return {
+        data,
+        total,
+        page,
+        totalPages,
+        hasMore: page < totalPages,
+      };
     } catch (error) {
       return this.handleServiceError(error, 'getProducts');
     }
@@ -1045,9 +1247,65 @@ export class ProductService {
     }
   }
 
-  async getSuppliers(): Promise<Supplier[]> {
+  async getSuppliers(
+    pagination: PaginationOptions = {},
+    filters: SupplierFilterOptions = {}
+  ): Promise<PaginatedResponse<Supplier>> {
     try {
-      return await prisma.supplier.findMany();
+      this.validatePaginationAndSorting(pagination, this.SUPPLIER_SORT_FIELDS);
+      const { page = 1, limit = 10, sortBy = 'name', sortOrder = 'asc' } = pagination;
+
+      const skip = (page - 1) * limit;
+
+      // Build where clause based on filters
+      const where: Prisma.SupplierWhereInput = {};
+
+      if (filters.search) {
+        where.OR = [
+          { name: { contains: filters.search, mode: 'insensitive' } },
+          { email: { contains: filters.search, mode: 'insensitive' } },
+          { phone: { contains: filters.search, mode: 'insensitive' } },
+          { address: { contains: filters.search, mode: 'insensitive' } },
+        ];
+      }
+
+      if (filters.hasIngredients) {
+        where.ingredients = {
+          some: {}, // Has at least one ingredient
+        };
+      }
+
+      const [data, total] = await prisma.$transaction([
+        prisma.supplier.findMany({
+          where,
+          skip,
+          take: limit,
+          orderBy: { [sortBy]: sortOrder },
+          include: {
+            ingredients: {
+              select: {
+                id: true,
+                name: true,
+                stock: true,
+              },
+            },
+            _count: {
+              select: { ingredients: true },
+            },
+          },
+        }),
+        prisma.supplier.count({ where }),
+      ]);
+
+      const totalPages = Math.ceil(total / limit);
+
+      return {
+        data,
+        total,
+        page,
+        totalPages,
+        hasMore: page < totalPages,
+      };
     } catch (error) {
       return this.handleServiceError(error, 'getSuppliers');
     }

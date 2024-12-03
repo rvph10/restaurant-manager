@@ -48,3 +48,45 @@ export interface CreateSupplierInput {
   phone: string;
   address?: string;
 }
+
+export interface PaginationOptions {
+  page?: number;
+  limit?: number;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+}
+
+export interface ProductFilterOptions extends FilterOptions {
+  categoryId?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  isAvailable?: boolean;
+}
+
+export interface IngredientFilterOptions extends FilterOptions {
+  category?: IngredientCategory;
+  supplierId?: string;
+  isExtra?: boolean;
+  minStock?: number;
+}
+
+export interface CategoryFilterOptions extends FilterOptions {
+  parentId?: string;
+}
+
+export interface SupplierFilterOptions extends FilterOptions {
+  hasIngredients?: boolean;
+}
+
+export interface FilterOptions {
+  search?: string;
+  isActive?: boolean;
+}
+
+export interface PaginatedResponse<T> {
+  data: T[];
+  total: number;
+  page: number;
+  totalPages: number;
+  hasMore: boolean;
+}
