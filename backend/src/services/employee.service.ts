@@ -322,32 +322,49 @@ export class EmployeeService {
     department?: Department[];
     status?: EmployeeStatus;
     role?: string;
-  }): Promise<Employee[]> {
+    page?: number;
+    limit?: number;
+    sortBy?: string;
+    sortOrder?: 'asc' | 'desc';
+  }): Promise<{ data: Employee[]; total: number; pages: number }> {
     try {
-      return await prisma.employee.findMany({
-        where: {
-          ...(filters?.department && { department: { hasEvery: filters.department } }),
-          ...(filters?.status && { status: filters.status }),
-          ...(filters?.role && {
-            roles: {
-              some: {
-                role: {
-                  id: filters.role,
-                },
-              },
-            },
-          }),
-        },
-        include: {
-          roles: {
-            include: {
-              role: true,
-            },
+      const page = filters?.page || 1;
+      const limit = filters?.limit || 10;
+      const skip = (page - 1) * limit;
+  
+      const [employees, total] = await prisma.$transaction([
+        prisma.employee.findMany({
+          where: {
+            ...(filters?.department && { department: { hasEvery: filters.department } }),
+            ...(filters?.status && { status: filters.status }),
+            ...(filters?.role && {
+              roles: { some: { role: { id: filters.role } } }
+            }),
           },
-        },
-      });
+          include: {
+            roles: { include: { role: true } }
+          },
+          skip,
+          take: limit,
+          orderBy: filters?.sortBy ? { [filters.sortBy]: filters.sortOrder } : undefined
+        }),
+        prisma.employee.count({
+          where: {
+            ...(filters?.department && { department: { hasEvery: filters.department } }),
+            ...(filters?.status && { status: filters.status }),
+            ...(filters?.role && {
+              roles: { some: { role: { id: filters.role } } }
+            }),
+          }
+        })
+      ]);
+  
+      return {
+        data: employees,
+        total,
+        pages: Math.ceil(total / limit)
+      };
     } catch (error) {
-      logger.error('Error getting employees:', error);
       return this.handleServiceError(error, 'getEmployees');
     }
   }
@@ -924,6 +941,26 @@ export class EmployeeService {
       return employee;
     } catch (error) {
       return this.handleServiceError(error, 'adjustEmployeeSalary');
+    }
+  }
+
+  async searchEmployees(query: string): Promise<Employee[]> {
+    try {
+      return await prisma.employee.findMany({
+        where: {
+          OR: [
+            { firstName: { contains: query, mode: 'insensitive' } },
+            { lastName: { contains: query, mode: 'insensitive' } },
+            { email: { contains: query, mode: 'insensitive' } },
+            { phone: { contains: query } }
+          ]
+        },
+        include: {
+          roles: { include: { role: true } }
+        }
+      });
+    } catch (error) {
+      return this.handleServiceError(error, 'searchEmployees');
     }
   }
 }
