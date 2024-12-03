@@ -11,6 +11,7 @@
     "esModuleInterop": true,
     "resolveJsonModule": true,
     "typeRoots": ["./node_modules/@types", "./src/types"],
+    "types": ["express", "express-session"],
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true
   },

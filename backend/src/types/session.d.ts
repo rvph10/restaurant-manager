@@ -6,4 +6,18 @@ declare module 'express-session' {
     roles?: string[];
     lastAccess?: Date;
   }
+
+  interface Session {
+    user: {
+      id: string;
+      roles: string[];
+    };
+  }
+
+  export interface Request {
+    user?: {
+      id: string;
+      roles: string[];
+    };
+  }
 }

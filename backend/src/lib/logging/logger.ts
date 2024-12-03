@@ -52,20 +52,21 @@ export const logger = createLogger({
     // Console transport
     new transports.Console(),
 
-    // Error log file transport
-    new transports.File({
-      filename: 'logs/error.log',
-      level: 'error',
-      maxsize: 5242880, // 5MB
-      maxFiles: 5,
-    }),
+    // // Error log file transport
+    // // Stopped writing the log 
+    // new transports.File({
+    //   filename: 'logs/error.log',
+    //   level: 'error',
+    //   maxsize: 5242880, // 5MB
+    //   maxFiles: 5,
+    // }),
 
-    // Combined log file transport
-    new transports.File({
-      filename: 'logs/combined.log',
-      maxsize: 5242880,
-      maxFiles: 5,
-    }),
+    // // Combined log file transport
+    // new transports.File({
+    //   filename: 'logs/combined.log',
+    //   maxsize: 5242880,
+    //   maxFiles: 5,
+    // }),
   ],
 });
 

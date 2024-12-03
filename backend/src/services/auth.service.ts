@@ -108,7 +108,7 @@ export class AuthService {
             entityName: `${employee.firstName} ${employee.lastName}`,
             entityID: employee.id,
           },
-          employee.id
+          'SYSTEM'
         );
         return {
           user: {

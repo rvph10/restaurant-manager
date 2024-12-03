@@ -17,12 +17,15 @@ export const authenticate = (req: AuthRequest, res: Response, next: NextFunction
     }
 
     const token = authHeader.split(' ')[1];
+    console.log('Token:', token);
     const decoded = jwt.verify(token, config.jwt.secret) as JwtPayload;
+    console.log('Decoded token:', decoded);
 
     req.user = decoded;
     next();
   } catch (error) {
     if (error instanceof jwt.JsonWebTokenError) {
+      console.error('Invalid token:', error.message);
       throw new AppError(401, 'Invalid token');
     }
     next(error);

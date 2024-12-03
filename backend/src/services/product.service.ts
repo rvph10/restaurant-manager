@@ -20,29 +20,32 @@ import { Decimal } from '@prisma/client/runtime/library';
 import { hasValidLength, isPositiveNumber, isValidEmail, isValidPhoneNumber } from '../utils/valid';
 
 class ProductServiceError extends Error {
-    constructor(message: string, public code?: string) {
-      super(message);
-      this.name = 'ProductServiceError';
-    }
+  constructor(
+    message: string,
+    public code?: string
+  ) {
+    super(message);
+    this.name = 'ProductServiceError';
   }
-  
-  class ValidationError extends ProductServiceError {
-    constructor(message: string) {
-      super(message, 'VALIDATION_ERROR');
-    }
+}
+
+class ValidationError extends ProductServiceError {
+  constructor(message: string) {
+    super(message, 'VALIDATION_ERROR');
   }
-  
-  class ResourceNotFoundError extends ProductServiceError {
-    constructor(message: string) {
-      super(message, 'NOT_FOUND');
-    }
+}
+
+class ResourceNotFoundError extends ProductServiceError {
+  constructor(message: string) {
+    super(message, 'NOT_FOUND');
   }
-  
-  class DuplicateResourceError extends ProductServiceError {
-    constructor(message: string) {
-      super(message, 'DUPLICATE');
-    }
+}
+
+class DuplicateResourceError extends ProductServiceError {
+  constructor(message: string) {
+    super(message, 'DUPLICATE');
   }
+}
 
 export class ProductService {
     private handleServiceError(error: unknown, context: string): never {
@@ -52,10 +55,17 @@ export class ProductService {
           context,
         });
       
+        // If it's already our custom error, just rethrow it
         if (error instanceof ProductServiceError) {
           throw error;
         }
       
+        // If it's a normal Error, convert it to our custom error
+        if (error instanceof Error) {
+          throw new ValidationError(error.message);
+        }
+      
+        // Handle Prisma errors
         if (error instanceof Prisma.PrismaClientKnownRequestError) {
           switch (error.code) {
             case 'P2002':
@@ -222,13 +232,19 @@ export class ProductService {
     try {
       if (isPositiveNumber(data.cost)) throw new Error('Cost must be a positive number');
       if (isPositiveNumber(data.stock)) throw new Error('Stock must be a positive number');
-      if (isPositiveNumber(data.reorderPoint)) throw new Error('Reorder point must be a positive number');
-      if (isPositiveNumber(data.reorderAmount)) throw new Error('Reorder amount must be a positive number');
-      if (!Object.values(IngredientCategory).includes(data.category)) throw new Error('Invalid category');
-      
-      if (data.isExtra && !data.extraPrice) throw new Error('Extra price must be provided for extra ingredients');
-      if (!data.isExtra && data.extraPrice) throw new Error('Extra price can only be provided for extra ingredients');
-      if (data.isExtra && (data.extraPrice ?? 0) < 0) throw new Error('Extra price must be a positive number');
+      if (isPositiveNumber(data.reorderPoint))
+        throw new Error('Reorder point must be a positive number');
+      if (isPositiveNumber(data.reorderAmount))
+        throw new Error('Reorder amount must be a positive number');
+      if (!Object.values(IngredientCategory).includes(data.category))
+        throw new Error('Invalid category');
+
+      if (data.isExtra && !data.extraPrice)
+        throw new Error('Extra price must be provided for extra ingredients');
+      if (!data.isExtra && data.extraPrice)
+        throw new Error('Extra price can only be provided for extra ingredients');
+      if (data.isExtra && (data.extraPrice ?? 0) < 0)
+        throw new Error('Extra price must be a positive number');
 
       if (data.supplierId && !(await this.checkSupplierExists({ id: data.supplierId }))) {
         throw new Error('Supplier with this ID does not exist');
@@ -254,12 +270,12 @@ export class ProductService {
       });
 
       auditLog(
-        'CREATE',
+        'CREATE INGREDIENT',
         {
           entityName: data.name,
           entityID: ingredient.id,
         },
-        data.user
+        data.user || 'SYSTEM'
       );
 
       return ingredient;
@@ -272,13 +288,20 @@ export class ProductService {
     try {
       if (isPositiveNumber(data.cost)) throw new Error('Cost must be a positive number');
       if (isPositiveNumber(data.stock)) throw new Error('Stock must be a positive number');
-      if (!Object.values(IngredientCategory).includes(data.category)) throw new Error('Invalid category');
-        if (isPositiveNumber(data.reorderPoint)) throw new Error('Reorder point must be a positive number');
-        if (isPositiveNumber(data.reorderAmount)) throw new Error('Reorder amount must be a positive number');
-        if (data.isExtra && !data.extraPrice) throw new Error('Extra price must be provided for extra ingredients');
-        if (!data.isExtra && data.extraPrice) throw new Error('Extra price can only be provided for extra ingredients');
-        if (data.isExtra && (data.extraPrice ?? 0) < 0) throw new Error('Extra price must be a positive number');
-        if (data.supplierId && !(await this.checkSupplierExists({ id: data.supplierId }))) throw new Error('Supplier with this ID does not exist');
+      if (!Object.values(IngredientCategory).includes(data.category))
+        throw new Error('Invalid category');
+      if (isPositiveNumber(data.reorderPoint))
+        throw new Error('Reorder point must be a positive number');
+      if (isPositiveNumber(data.reorderAmount))
+        throw new Error('Reorder amount must be a positive number');
+      if (data.isExtra && !data.extraPrice)
+        throw new Error('Extra price must be provided for extra ingredients');
+      if (!data.isExtra && data.extraPrice)
+        throw new Error('Extra price can only be provided for extra ingredients');
+      if (data.isExtra && (data.extraPrice ?? 0) < 0)
+        throw new Error('Extra price must be a positive number');
+      if (data.supplierId && !(await this.checkSupplierExists({ id: data.supplierId })))
+        throw new Error('Supplier with this ID does not exist');
 
       const ingredient = await prisma.ingredient.update({
         where: { id },
@@ -298,12 +321,12 @@ export class ProductService {
       });
 
       auditLog(
-        'UPDATE',
+        'UPDATE INGREDIENT',
         {
           entityName: data.name,
           entityID: ingredient,
         },
-        data.user
+        data.user || 'SYSTEM'
       );
 
       return ingredient;
@@ -314,13 +337,14 @@ export class ProductService {
 
   async deleteIngredient(id: string): Promise<void> {
     try {
-      if (!(await this.checkIngredientExists({ id }))) throw new Error('Ingredient with this ID does not exist');
+      if (!(await this.checkIngredientExists({ id })))
+        throw new Error('Ingredient with this ID does not exist');
       const ingredient = await prisma.ingredient.delete({
         where: { id },
       });
 
       auditLog(
-        'DELETE',
+        'DELETE INGREDIENT',
         {
           entityName: ingredient.name,
           entityID: ingredient.id,
@@ -333,13 +357,18 @@ export class ProductService {
   }
 
   async getIngredients(): Promise<Ingredient[]> {
-    try { return await prisma.ingredient.findMany(); } catch (error) { return this.handleServiceError(error, 'getIngredients'); }
+    try {
+      return await prisma.ingredient.findMany();
+    } catch (error) {
+      return this.handleServiceError(error, 'getIngredients');
+    }
   }
 
   async getIngredient(id: string): Promise<Ingredient | null> {
     try {
       if (!id) throw new Error('ID must be provided');
-      if (!(await this.checkIngredientExists({ id }))) throw new Error('Ingredient with this ID does not exist');
+      if (!(await this.checkIngredientExists({ id })))
+        throw new Error('Ingredient with this ID does not exist');
       return await prisma.ingredient.findUnique({ where: { id } });
     } catch (error) {
       return this.handleServiceError(error, 'getIngredient');
@@ -357,7 +386,8 @@ export class ProductService {
   async getCategory(id: string): Promise<Category | null> {
     try {
       if (!id) throw new Error('ID must be provided');
-    if (!(await this.checkCategoryExists({ id }))) throw new Error('Category with this ID does not exist');
+      if (!(await this.checkCategoryExists({ id })))
+        throw new Error('Category with this ID does not exist');
       return await prisma.category.findUnique({ where: { id } });
     } catch (error) {
       return this.handleServiceError(error, 'getCategory');
@@ -366,9 +396,12 @@ export class ProductService {
 
   async createCategory(data: CreateCategoryInput, newParentCategory: boolean): Promise<Category> {
     try {
-        if (isPositiveNumber(data.displayOrder)) throw new Error('Display order must be a positive number');
-      if (data.description && hasValidLength(data.description, 0, 128)) throw new Error('Description must be at most 128 characters');
-      if (await this.checkCategoryExists({ name: data.name })) throw new Error('Category with this name already exists'); 
+      if (!isPositiveNumber(data.displayOrder))
+        throw new Error('Display order must be a positive number');
+      if (data.description && !hasValidLength(data.description, 0, 128))
+        throw new Error('Description must be at most 128 characters');
+      if (await this.checkCategoryExists({ name: data.name }))
+        throw new Error('Category with this name already exists');
       let nextCategory = { displayOrder: 0 };
       if (newParentCategory) {
         const foundCategory = await prisma.category.findFirst({
@@ -388,12 +421,12 @@ export class ProductService {
         },
       });
       auditLog(
-        'CREATE',
+        'CREATE CATEGORY',
         {
           entityName: data.name,
           entityID: category.id,
         },
-        data.user
+        data.user || 'SYSTEM'
       );
       return category;
     } catch (error) {
@@ -401,11 +434,18 @@ export class ProductService {
     }
   }
 
-  async updateCategory(id: string, data: CreateCategoryInput, newParentCategory: boolean): Promise<Category> {
+  async updateCategory(
+    id: string,
+    data: CreateCategoryInput,
+    newParentCategory: boolean
+  ): Promise<Category> {
     try {
-      if (isPositiveNumber(data.displayOrder)) throw new Error('Display order must be a positive number');
-      if (data.description && hasValidLength(data.description, 0, 128)) throw new Error('Description must be at most 128 characters');
-      if (await this.checkCategoryExists({ name: data.name })) throw new Error('Category with this name already exists');
+      if (isPositiveNumber(data.displayOrder))
+        throw new Error('Display order must be a positive number');
+      if (data.description && hasValidLength(data.description, 0, 128))
+        throw new Error('Description must be at most 128 characters');
+      if (await this.checkCategoryExists({ name: data.name }))
+        throw new Error('Category with this name already exists');
       let nextCategory = { displayOrder: 0 };
       if (newParentCategory) {
         const foundCategory = await prisma.category.findFirst({
@@ -426,12 +466,12 @@ export class ProductService {
         },
       });
       auditLog(
-        'UPDATE',
+        'UPDATE CATEGORY',
         {
           entityName: data.name,
           entityID: category,
         },
-        data.user
+        data.user || 'SYSTEM'
       );
       return category;
     } catch (error) {
@@ -441,10 +481,11 @@ export class ProductService {
 
   async deleteCategory(id: string, user: string): Promise<void> {
     try {
-      if (!(await this.checkCategoryExists({ id }))) throw new Error('Category with this ID does not exist');
-      const category = await prisma.category.delete({ where: { id }, });
+      if (!(await this.checkCategoryExists({ id })))
+        throw new Error('Category with this ID does not exist');
+      const category = await prisma.category.delete({ where: { id } });
       auditLog(
-        'DELETE',
+        'DELETE CATEGORY',
         {
           entityName: category.name,
           entityID: category.id,
@@ -458,7 +499,7 @@ export class ProductService {
 
   async getIngredientsByCategory(category: string): Promise<Ingredient[]> {
     try {
-      if (!category) throw new Error('Category must be provided'); 
+      if (!category) throw new Error('Category must be provided');
       if (!Object.values(IngredientCategory).includes(category as IngredientCategory)) {
         throw new Error('Invalid category');
       }
@@ -473,7 +514,8 @@ export class ProductService {
   async getIngredientsBySupplier(supplierId: string): Promise<Ingredient[]> {
     try {
       if (!supplierId) throw new Error('Supplier ID must be provided');
-      if (!(await this.checkSupplierExists({ id: supplierId }))) throw new Error('Supplier with this ID does not exist');
+      if (!(await this.checkSupplierExists({ id: supplierId })))
+        throw new Error('Supplier with this ID does not exist');
       return await prisma.ingredient.findMany({
         where: { supplierId },
       });
@@ -485,10 +527,14 @@ export class ProductService {
   async createProduct(data: CreateProductInput): Promise<Product> {
     try {
       if (isPositiveNumber(data.price)) throw new Error('Price must be a positive number');
-      if (data.freeExtras > 0 && !data.freeExtrasCategory) throw new Error('Free extras category must be provided');
-      if (data.preparationTime && isPositiveNumber(data.preparationTime)) throw new Error('Preparation time must be a positive number');
-      if (await this.checkCategoryExists({ name: data.name })) throw new Error('Category with this name already exists');
-      if (await this.checkIngredientExists({ name: data.name }))  throw new Error('Ingredient with this name already exists');
+      if (data.freeExtras > 0 && !data.freeExtrasCategory)
+        throw new Error('Free extras category must be provided');
+      if (data.preparationTime && isPositiveNumber(data.preparationTime))
+        throw new Error('Preparation time must be a positive number');
+      if (await this.checkCategoryExists({ name: data.name }))
+        throw new Error('Category with this name already exists');
+      if (await this.checkIngredientExists({ name: data.name }))
+        throw new Error('Ingredient with this name already exists');
       const product = await prisma.product.create({
         data: {
           name: data.name,
@@ -507,12 +553,12 @@ export class ProductService {
         },
       });
       auditLog(
-        'CREATE',
+        'CREATE PRODUCT',
         {
           entityName: data.name,
           entityID: product.id,
         },
-        data.user
+        data.user || 'SYSTEM'
       );
       return product;
     } catch (error) {
@@ -522,9 +568,11 @@ export class ProductService {
 
   async updateProduct(id: string, data: CreateProductInput): Promise<Product> {
     try {
-        if (isPositiveNumber(data.price)) throw new Error('Price must be a positive number');
-        if (data.freeExtras > 0 && !data.freeExtrasCategory) throw new Error('Free extras category must be provided');
-        if (data.preparationTime && isPositiveNumber(data.preparationTime)) throw new Error('Preparation time must be a positive number');
+      if (isPositiveNumber(data.price)) throw new Error('Price must be a positive number');
+      if (data.freeExtras > 0 && !data.freeExtrasCategory)
+        throw new Error('Free extras category must be provided');
+      if (data.preparationTime && isPositiveNumber(data.preparationTime))
+        throw new Error('Preparation time must be a positive number');
       if (await this.checkCategoryExists({ name: data.name })) {
         throw new Error('Category with this name already exists');
       }
@@ -550,12 +598,12 @@ export class ProductService {
         },
       });
       auditLog(
-        'UPDATE',
+        'UPDATE PRODUCT',
         {
           entityName: data.name,
           entityID: product,
         },
-        data.user
+        data.user || 'SYSTEM'
       );
       return product;
     } catch (error) {
@@ -572,12 +620,12 @@ export class ProductService {
         where: { id },
       });
       auditLog(
-        'DELETE',
+        'DELETE PRODUCT',
         {
           entityName: product.name,
           entityID: product.id,
         },
-        user
+        user || 'SYSTEM'
       );
     } catch (error) {
       return this.handleServiceError(error, 'deleteProduct');
@@ -640,12 +688,12 @@ export class ProductService {
         },
       });
       auditLog(
-        'CREATE',
+        'CREATE SUPPLIER',
         {
           entityName: data.name,
           entityID: supplier.id,
         },
-        data.user
+        data.user || 'SYSTEM'
       );
       return supplier;
     } catch (error) {
@@ -655,10 +703,11 @@ export class ProductService {
 
   async updateSupplier(id: string, data: CreateSupplierInput): Promise<Supplier> {
     try {
-        if (!data.name) throw new Error('Name must be provided');
-        if (!data.phone && !isValidPhoneNumber(data.phone)) throw new Error('Invalid phone number');
-        if (await this.checkSupplierExists({ name: data.name, phone: data.phone })) throw new Error('Supplier with this name/phone already exists');
-        if (data.email && isValidEmail(data.email)) throw new Error('Invalid email address');
+      if (!data.name) throw new Error('Name must be provided');
+      if (!data.phone && !isValidPhoneNumber(data.phone)) throw new Error('Invalid phone number');
+      if (await this.checkSupplierExists({ name: data.name, phone: data.phone }))
+        throw new Error('Supplier with this name/phone already exists');
+      if (data.email && isValidEmail(data.email)) throw new Error('Invalid email address');
       const supplier = await prisma.supplier.update({
         where: { id },
         data: {
@@ -669,12 +718,12 @@ export class ProductService {
         },
       });
       auditLog(
-        'UPDATE',
+        'UPDATE SUPPLIER',
         {
           entityName: data.name,
           entityID: supplier,
         },
-        data.user
+        data.user || 'SYSTEM'
       );
       return supplier;
     } catch (error) {
@@ -691,15 +740,40 @@ export class ProductService {
         where: { id },
       });
       auditLog(
-        'DELETE',
+        'DELETE SUPPLIER',
         {
           entityName: supplier.name,
           entityID: supplier.id,
         },
-        user
+        user || 'SYSTEM'
       );
     } catch (error) {
       return this.handleServiceError(error, 'deleteSupplier');
+    }
+  }
+
+  async getSuppliers(): Promise<Supplier[]> {
+    try {
+      return await prisma.supplier.findMany();
+    } catch (error) {
+      return this.handleServiceError(error, 'getSuppliers');
+    }
+  }
+
+  async getSupplier(id: string): Promise<Supplier | null> {
+    try {
+      if (!id) {
+        throw new Error('ID must be provided');
+      }
+      const supplier = await prisma.supplier.findUnique({
+        where: { id },
+      });
+      if (!supplier) {
+        throw new Error('Supplier not found');
+      }
+      return supplier;
+    } catch (error) {
+      return this.handleServiceError(error, 'getSupplier');
     }
   }
 }
