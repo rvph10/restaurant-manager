@@ -26,9 +26,9 @@ export const authenticate = (req: AuthRequest, res: Response, next: NextFunction
     req.user = {
       id: decoded.userId,
       userId: decoded.userId,
-      roles: decoded.roles
+      roles: decoded.roles,
     };
-    
+
     next();
   } catch (error) {
     if (error instanceof jwt.JsonWebTokenError) {

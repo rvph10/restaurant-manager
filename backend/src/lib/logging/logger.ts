@@ -53,7 +53,7 @@ export const logger = createLogger({
     new transports.Console(),
 
     // // Error log file transport
-    // // Stopped writing the log 
+    // // Stopped writing the log
     // new transports.File({
     //   filename: 'logs/error.log',
     //   level: 'error',

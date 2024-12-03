@@ -8,7 +8,9 @@ const router = Router();
 const productController = new ProductController();
 
 // Helper function to wrap controller methods
-const wrapHandler = (handler: (req: AuthenticatedRequest, res: Response) => Promise<any>): RequestHandler => {
+const wrapHandler = (
+  handler: (req: AuthenticatedRequest, res: Response) => Promise<any>
+): RequestHandler => {
   return (req, res, next) => {
     return handler(req as AuthenticatedRequest, res).catch(next);
   };
