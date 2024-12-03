@@ -18,6 +18,7 @@ export interface CreateEmployeeInput {
   email: string;
   phone: string;
   password: string;
+  salaryHours?: number;
   birthDate: Date;
   gender?: Gender;
   employmentType: EmploymentType;
@@ -173,4 +174,11 @@ export interface EmployeeCertificationInput {
   issueDate: Date;
   expiryDate?: Date;
   certificateNumber?: string;
+}
+
+export interface SalaryAdjustment {
+  user: string;
+  employeeId: string;
+  hourlyRate: number;
+  salary: number;
 }

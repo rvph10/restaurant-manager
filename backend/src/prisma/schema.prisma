@@ -247,6 +247,7 @@ model Employee {
   department     Department[]   @default([])
   hourlyRate     Decimal        @db.Decimal(10, 2)
   bankAccount    String?
+  salaryHours    Decimal?       @db.Decimal(10, 2)
 
   // Work Schedule
   maxHoursPerWeek Int       @default(40)

@@ -1,5 +1,5 @@
 import { prisma } from '../prisma/client';
-import { Prisma } from '@prisma/client';
+import { PerformanceReview, Prisma, ShiftAssignment } from '@prisma/client';
 import {
   CreateEmployeeInput,
   UpdateEmployeeInput,
@@ -11,6 +11,7 @@ import {
   StatusChangeInput,
   EmployeeCertificationInput,
   TimeOffResponse,
+  SalaryAdjustment,
 } from '../interfaces/employee.interface';
 import {
   EmployeeStatus,
@@ -216,6 +217,7 @@ export class EmployeeService {
         data: {
           ...data,
           password: data.password,
+          salaryHours: data.salaryHours,
           roles: {
             create: data.roles.map((roleId) => ({
               roleId: roleId,
@@ -837,6 +839,91 @@ export class EmployeeService {
     } catch (error) {
       logger.error('Error ending employee break:', error);
       return this.handleServiceError(error, 'endEmployeeBreak');
+    }
+  }
+
+  async getEmployeeSchedule(
+    employeeId: string,
+    startDate: Date,
+    endDate: Date
+  ): Promise<ShiftAssignment[]> {
+    try {
+      return await prisma.shiftAssignment.findMany({
+        where: {
+          employeeId,
+          startTime: { gte: startDate },
+          endTime: { lte: endDate },
+        },
+        include: {
+          shift: true,
+          scheduledBreaks: true,
+        },
+      });
+    } catch (error) {
+      return this.handleServiceError(error, 'getEmployeeSchedule');
+    }
+  }
+
+  async getPerformanceMetrics(
+    employeeId: string,
+    period: { start: Date; end: Date }
+  ): Promise<{
+    reviews: PerformanceReview[];
+    attendance: { present: number; late: number; absent: number };
+    averageRating: number;
+  }> {
+    try {
+      const [reviews, shifts] = await Promise.all([
+        prisma.performanceReview.findMany({
+          where: {
+            employeeId,
+            reviewDate: { gte: period.start, lte: period.end },
+          },
+        }),
+        prisma.shiftAssignment.findMany({
+          where: {
+            employeeId,
+            startTime: { gte: period.start, lte: period.end },
+          },
+        }),
+      ]);
+
+      const attendance = {
+        present: shifts.filter((s) => s.status === 'COMPLETED').length,
+        late: shifts.filter((s) => s.isLate).length,
+        absent: shifts.filter((s) => s.status === 'NO_SHOW').length,
+      };
+
+      const averageRating = reviews.reduce((acc, rev) => acc + rev.rating, 0) / reviews.length || 0;
+
+      return { reviews, attendance, averageRating };
+    } catch (error) {
+      return this.handleServiceError(error, 'getPerformanceMetrics');
+    }
+  }
+
+  async adjustEmployeeSalary(data: SalaryAdjustment): Promise<Employee> {
+    try {
+      const employee = await prisma.employee.update({
+        where: { id: data.employeeId },
+        data: {
+          hourlyRate: data.hourlyRate,
+          salaryHours: data.salary,
+        },
+      });
+
+      await auditLog(
+        'ADJUST_EMPLOYEE_SALARY',
+        {
+          employeeId: data.employeeId,
+          action: 'Adjusted employee salary',
+        },
+        data.user
+      );
+
+      return employee;
+    } catch (error) {
+      return this.handleServiceError(error, 'adjustEmployeeSalary');
     }
   }
 }
