@@ -74,16 +74,16 @@ export class AuthController {
   };
   public logout = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-        if (!req.user?.id) {
-            throw new AppError(401, 'Not authenticated');
-        }
-        await this.authService.logout(req.user.id);
-        res.status(200).json({
-            status: 'success',
-            message: 'Successfully logged out'
-        });
+      if (!req.user?.id) {
+        throw new AppError(401, 'Not authenticated');
+      }
+      await this.authService.logout(req.user.id);
+      res.status(200).json({
+        status: 'success',
+        message: 'Successfully logged out',
+      });
     } catch (error) {
-        next(error);
+      next(error);
     }
-};
+  };
 }

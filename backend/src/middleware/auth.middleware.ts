@@ -13,32 +13,28 @@ export interface AuthRequest extends Request {
   };
 }
 
-export const authenticate = (
-  req: AuthenticatedRequest, 
-  res: Response, 
-  next: NextFunction
-) => {
+export const authenticate = (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
-      const authHeader = req.headers.authorization;
+    const authHeader = req.headers.authorization;
 
-      if (!authHeader?.startsWith('Bearer ')) {
-          throw new AppError(401, 'Authorization required');
-      }
+    if (!authHeader?.startsWith('Bearer ')) {
+      throw new AppError(401, 'Authorization required');
+    }
 
-      const token = authHeader.split(' ')[1];
-      const decoded = jwt.verify(token, config.jwt.secret) as JwtPayload;
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, config.jwt.secret) as JwtPayload;
 
-      req.user = {
-          id: decoded.userId,
-          roles: decoded.roles
-      };
-      
-      next();
+    req.user = {
+      id: decoded.userId,
+      roles: decoded.roles,
+    };
+
+    next();
   } catch (error) {
-      if (error instanceof jwt.JsonWebTokenError) {
-          throw new AppError(401, 'Invalid token');
-      }
-      next(error);
+    if (error instanceof jwt.JsonWebTokenError) {
+      throw new AppError(401, 'Invalid token');
+    }
+    next(error);
   }
 };
 

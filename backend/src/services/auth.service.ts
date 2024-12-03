@@ -123,7 +123,7 @@ export class AuthService {
             roles: employee.roles.map((r) => r.role.name),
           },
           token,
-          sessionId
+          sessionId,
         };
       } catch (error) {
         logger.error('Error creating employee:', error);
@@ -166,15 +166,15 @@ export class AuthService {
 
     await this.prisma.employee.updateMany({
       where: {
-          id: employee.id,
-          NOT: {
-              sessionId: sessionId
-          }
+        id: employee.id,
+        NOT: {
+          sessionId: sessionId,
+        },
       },
       data: {
-          sessionId: null
-      }
-  });
+        sessionId: null,
+      },
+    });
 
     await this.prisma.employee.update({
       where: { id: employee.id },
@@ -234,7 +234,7 @@ export class AuthService {
     }
   }
 
-  public async resetPassword(data: PasswordReset): Promise<void> {
+  async resetPassword(data: PasswordReset): Promise<void> {
     const employee = await this.prisma.employee.findFirst({
       where: {
         resetPasswordToken: data.token,
@@ -258,21 +258,21 @@ export class AuthService {
     });
   }
 
-  public async logout(userId: string): Promise<void> {
+  async logout(userId: string): Promise<void> {
     await this.prisma.employee.update({
-        where: { id: userId },
-        data: {
-            sessionId: null,
-        }
+      where: { id: userId },
+      data: {
+        sessionId: null,
+      },
     });
 
     await auditLog(
-        'LOGOUT',
-        {
-            entityID: userId,
-            action: 'User logged out'
-        },
-        userId
+      'LOGOUT',
+      {
+        entityID: userId,
+        action: 'User logged out',
+      },
+      userId
     );
-}
+  }
 }
