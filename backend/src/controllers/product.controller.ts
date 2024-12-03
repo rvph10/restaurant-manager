@@ -1,7 +1,13 @@
 import { Request as ExpressRequest, Response } from 'express';
 import { ProductService } from '../services/product.service';
 import { logger } from '../lib/logging/logger';
-import { CategoryFilterOptions, IngredientFilterOptions, PaginationOptions, ProductFilterOptions, SupplierFilterOptions } from '../interfaces/product.interface';
+import {
+  CategoryFilterOptions,
+  IngredientFilterOptions,
+  PaginationOptions,
+  ProductFilterOptions,
+  SupplierFilterOptions,
+} from '../interfaces/product.interface';
 import { IngredientCategory } from '@prisma/client';
 
 interface AuthenticatedRequest extends ExpressRequest {
@@ -27,14 +33,17 @@ export class ProductController {
       throw new Error('Limit must be between 1 and 100');
     }
   }
-  
-  private sendPaginatedResponse<T>(res: Response, data: { 
-    data: T[],
-    total: number,
-    page: number,
-    totalPages: number,
-    hasMore: boolean 
-  }): void {
+
+  private sendPaginatedResponse<T>(
+    res: Response,
+    data: {
+      data: T[];
+      total: number;
+      page: number;
+      totalPages: number;
+      hasMore: boolean;
+    }
+  ): void {
     res.json({
       status: 'success',
       ...data,
@@ -42,53 +51,53 @@ export class ProductController {
         currentPage: data.page,
         totalPages: data.totalPages,
         totalItems: data.total,
-        hasMore: data.hasMore
-      }
+        hasMore: data.hasMore,
+      },
     });
   }
-  
+
   private buildPaginationOptions(query: any): PaginationOptions {
     this.validateQueryParams(query);
     return {
       page: query.page ? parseInt(query.page as string) : 1,
       limit: query.limit ? parseInt(query.limit as string) : 10,
       sortBy: query.sortBy as string,
-      sortOrder: query.sortOrder as 'asc' | 'desc'
+      sortOrder: query.sortOrder as 'asc' | 'desc',
     };
   }
-  
+
   private buildProductFilters(query: any): ProductFilterOptions {
     return {
       search: query.search as string,
       isAvailable: query.isAvailable === 'true',
       minPrice: query.minPrice ? parseFloat(query.minPrice as string) : undefined,
       maxPrice: query.maxPrice ? parseFloat(query.maxPrice as string) : undefined,
-      categoryId: query.categoryId as string
+      categoryId: query.categoryId as string,
     };
   }
-  
+
   private buildIngredientFilters(query: any): IngredientFilterOptions {
     return {
       search: query.search as string,
       category: query.category as IngredientCategory,
       supplierId: query.supplierId as string,
       isExtra: query.isExtra === 'true',
-      minStock: query.minStock ? parseInt(query.minStock as string) : undefined
+      minStock: query.minStock ? parseInt(query.minStock as string) : undefined,
     };
   }
-  
+
   private buildCategoryFilters(query: any): CategoryFilterOptions {
     return {
       search: query.search as string,
       isActive: query.isActive === 'true',
-      parentId: query.parentId as string
+      parentId: query.parentId as string,
     };
   }
-  
+
   private buildSupplierFilters(query: any): SupplierFilterOptions {
     return {
       search: query.search as string,
-      hasIngredients: query.hasIngredients === 'true'
+      hasIngredients: query.hasIngredients === 'true',
     };
   }
 
@@ -96,33 +105,33 @@ export class ProductController {
     logger.error('ProductController Error:', {
       message: error.message,
       stack: error.stack,
-      code: error.code
+      code: error.code,
     });
-  
+
     switch (error.code) {
       case 'VALIDATION_ERROR':
         return res.status(400).json({
           status: 'error',
           code: 'VALIDATION_ERROR',
-          message: error.message
+          message: error.message,
         });
       case 'NOT_FOUND':
         return res.status(404).json({
           status: 'error',
           code: 'NOT_FOUND',
-          message: error.message
+          message: error.message,
         });
       case 'DUPLICATE':
         return res.status(409).json({
           status: 'error',
           code: 'DUPLICATE',
-          message: error.message
+          message: error.message,
         });
       default:
         return res.status(500).json({
           status: 'error',
           code: 'INTERNAL_SERVER_ERROR',
-          message: 'Internal server error'
+          message: 'Internal server error',
         });
     }
   }
@@ -132,7 +141,7 @@ export class ProductController {
     try {
       const pagination = this.buildPaginationOptions(req.query);
       const filters = this.buildProductFilters(req.query);
-      
+
       const result = await this.productService.getProducts(pagination, filters);
       this.sendPaginatedResponse(res, result);
     } catch (error) {
@@ -209,7 +218,7 @@ export class ProductController {
     try {
       const pagination = this.buildPaginationOptions(req.query);
       const filters = this.buildCategoryFilters(req.query);
-      
+
       const result = await this.productService.getCategories(pagination, filters);
       this.sendPaginatedResponse(res, result);
     } catch (error) {
@@ -290,7 +299,7 @@ export class ProductController {
     try {
       const pagination = this.buildPaginationOptions(req.query);
       const filters = this.buildIngredientFilters(req.query);
-      
+
       const result = await this.productService.getIngredients(pagination, filters);
       this.sendPaginatedResponse(res, result);
     } catch (error) {
@@ -360,7 +369,7 @@ export class ProductController {
     try {
       const pagination = this.buildPaginationOptions(req.query);
       const filters = this.buildSupplierFilters(req.query);
-      
+
       const result = await this.productService.getSuppliers(pagination, filters);
       this.sendPaginatedResponse(res, result);
     } catch (error) {

@@ -67,16 +67,16 @@ class DuplicateResourceError extends ProductServiceError {
 
 /**
  * Service class for managing products, ingredients, categories, and suppliers in a restaurant system.
- * 
+ *
  * @class ProductService
  * @description Handles CRUD operations and business logic for products, ingredients, categories, and suppliers.
  *             Includes validation, error handling, and audit logging for all operations.
- * 
+ *
  * @property {string[]} PRODUCT_SORT_FIELDS - Valid fields for sorting products
  * @property {string[]} INGREDIENT_SORT_FIELDS - Valid fields for sorting ingredients
  * @property {string[]} CATEGORY_SORT_FIELDS - Valid fields for sorting categories
  * @property {string[]} SUPPLIER_SORT_FIELDS - Valid fields for sorting suppliers
- * 
+ *
  * @remarks
  * - All methods include comprehensive error handling through handleServiceError
  * - Validation is performed for all inputs using dedicated validation methods
@@ -1107,7 +1107,7 @@ export class ProductService {
     filters: ProductFilterOptions = {}
   ): Promise<PaginatedResponse<Product>> {
     try {
-      this.validatePaginationAndSorting(pagination, this.PRODUCT_SORT_FIELDS)
+      this.validatePaginationAndSorting(pagination, this.PRODUCT_SORT_FIELDS);
       const { page = 1, limit = 10, sortBy = 'createdAt', sortOrder = 'desc' } = pagination;
 
       const skip = (page - 1) * limit;
@@ -1353,13 +1353,13 @@ export class ProductService {
         where: {
           OR: [
             { name: { contains: searchTerm, mode: 'insensitive' } },
-            { description: { contains: searchTerm, mode: 'insensitive' } }
-          ]
+            { description: { contains: searchTerm, mode: 'insensitive' } },
+          ],
         },
         include: {
           category: true,
-          ingredients: true
-        }
+          ingredients: true,
+        },
       });
     } catch (error) {
       return this.handleServiceError(error, 'searchProducts');
@@ -1370,20 +1370,20 @@ export class ProductService {
     try {
       const product = await prisma.product.findUnique({
         where: { id: productId },
-        include: { ingredients: true }
+        include: { ingredients: true },
       });
-  
+
       if (!product) {
         throw new ResourceNotFoundError('Product not found');
       }
-  
+
       await prisma.$transaction(async (tx) => {
         for (const ingredient of product.ingredients) {
           await tx.ingredient.update({
             where: { id: ingredient.id },
             data: {
-              stock: { decrement: quantity }
-            }
+              stock: { decrement: quantity },
+            },
           });
         }
       });
@@ -1401,11 +1401,11 @@ export class ProductService {
       if (!(await this.checkCategoryExists({ id: newCategoryId }))) {
         throw new ResourceNotFoundError('Category not found');
       }
-  
+
       return await prisma.product.update({
         where: { id: productId },
         data: { categoryId: newCategoryId },
-        include: { category: true }
+        include: { category: true },
       });
     } catch (error) {
       return this.handleServiceError(error, 'moveProduct');
@@ -1413,43 +1413,43 @@ export class ProductService {
   }
 
   async updateProductIngredients(
-    productId: string, 
-    ingredientUpdates: { add?: string[], remove?: string[] }
+    productId: string,
+    ingredientUpdates: { add?: string[]; remove?: string[] }
   ): Promise<Product> {
     try {
       const { add = [], remove = [] } = ingredientUpdates;
-  
+
       // Validate product exists
       const product = await prisma.product.findUnique({
         where: { id: productId },
-        include: { ingredients: true }
+        include: { ingredients: true },
       });
-  
+
       if (!product) {
         throw new ResourceNotFoundError('Product not found');
       }
-  
+
       // Validate all ingredients exist
       if (add.length > 0) {
         const ingredients = await prisma.ingredient.findMany({
-          where: { id: { in: add } }
+          where: { id: { in: add } },
         });
-  
+
         if (ingredients.length !== add.length) {
           throw new ValidationError('One or more ingredients to add not found');
         }
       }
-  
+
       // Update product ingredients
       return await prisma.product.update({
         where: { id: productId },
         data: {
           ingredients: {
-            disconnect: remove.map(id => ({ id })),
-            connect: add.map(id => ({ id }))
-          }
+            disconnect: remove.map((id) => ({ id })),
+            connect: add.map((id) => ({ id })),
+          },
         },
-        include: { ingredients: true }
+        include: { ingredients: true },
       });
     } catch (error) {
       return this.handleServiceError(error, 'updateProductIngredients');
