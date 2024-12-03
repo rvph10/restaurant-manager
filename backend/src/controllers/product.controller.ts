@@ -18,44 +18,123 @@ export class ProductController {
     this.productService = new ProductService();
   }
 
+  private validateQueryParams(query: any): void {
+    const { page, limit } = query;
+    if (page && (isNaN(page) || page < 1)) {
+      throw new Error('Page must be a positive number');
+    }
+    if (limit && (isNaN(limit) || limit < 1 || limit > 100)) {
+      throw new Error('Limit must be between 1 and 100');
+    }
+  }
+  
+  private sendPaginatedResponse<T>(res: Response, data: { 
+    data: T[],
+    total: number,
+    page: number,
+    totalPages: number,
+    hasMore: boolean 
+  }): void {
+    res.json({
+      status: 'success',
+      ...data,
+      metadata: {
+        currentPage: data.page,
+        totalPages: data.totalPages,
+        totalItems: data.total,
+        hasMore: data.hasMore
+      }
+    });
+  }
+  
+  private buildPaginationOptions(query: any): PaginationOptions {
+    this.validateQueryParams(query);
+    return {
+      page: query.page ? parseInt(query.page as string) : 1,
+      limit: query.limit ? parseInt(query.limit as string) : 10,
+      sortBy: query.sortBy as string,
+      sortOrder: query.sortOrder as 'asc' | 'desc'
+    };
+  }
+  
+  private buildProductFilters(query: any): ProductFilterOptions {
+    return {
+      search: query.search as string,
+      isAvailable: query.isAvailable === 'true',
+      minPrice: query.minPrice ? parseFloat(query.minPrice as string) : undefined,
+      maxPrice: query.maxPrice ? parseFloat(query.maxPrice as string) : undefined,
+      categoryId: query.categoryId as string
+    };
+  }
+  
+  private buildIngredientFilters(query: any): IngredientFilterOptions {
+    return {
+      search: query.search as string,
+      category: query.category as IngredientCategory,
+      supplierId: query.supplierId as string,
+      isExtra: query.isExtra === 'true',
+      minStock: query.minStock ? parseInt(query.minStock as string) : undefined
+    };
+  }
+  
+  private buildCategoryFilters(query: any): CategoryFilterOptions {
+    return {
+      search: query.search as string,
+      isActive: query.isActive === 'true',
+      parentId: query.parentId as string
+    };
+  }
+  
+  private buildSupplierFilters(query: any): SupplierFilterOptions {
+    return {
+      search: query.search as string,
+      hasIngredients: query.hasIngredients === 'true'
+    };
+  }
+
   private handleError(error: any, res: Response) {
-    logger.error('ProductController Error:', error);
-
-    if (error.code === 'VALIDATION_ERROR') {
-      return res.status(400).json({ error: error.message });
+    logger.error('ProductController Error:', {
+      message: error.message,
+      stack: error.stack,
+      code: error.code
+    });
+  
+    switch (error.code) {
+      case 'VALIDATION_ERROR':
+        return res.status(400).json({
+          status: 'error',
+          code: 'VALIDATION_ERROR',
+          message: error.message
+        });
+      case 'NOT_FOUND':
+        return res.status(404).json({
+          status: 'error',
+          code: 'NOT_FOUND',
+          message: error.message
+        });
+      case 'DUPLICATE':
+        return res.status(409).json({
+          status: 'error',
+          code: 'DUPLICATE',
+          message: error.message
+        });
+      default:
+        return res.status(500).json({
+          status: 'error',
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Internal server error'
+        });
     }
-    if (error.code === 'NOT_FOUND') {
-      return res.status(404).json({ error: error.message });
-    }
-    if (error.code === 'DUPLICATE') {
-      return res.status(409).json({ error: error.message });
-    }
-
-    return res.status(500).json({ error: 'Internal server error' });
   }
 
   // Product Endpoints
   public getProducts = async (req: AuthenticatedRequest, res: Response) => {
     try {
-      // Extract pagination from query params
-      const pagination: PaginationOptions = {
-        page: req.query.page ? parseInt(req.query.page as string) : 1,
-        limit: req.query.limit ? parseInt(req.query.limit as string) : 10,
-        sortBy: req.query.sortBy as string,
-        sortOrder: req.query.sortOrder as 'asc' | 'desc'
-      };
-  
-      // Extract filters from query params
-      const filters: ProductFilterOptions = {
-        search: req.query.search as string,
-        isAvailable: req.query.isAvailable === 'true',
-        minPrice: req.query.minPrice ? parseFloat(req.query.minPrice as string) : undefined,
-        maxPrice: req.query.maxPrice ? parseFloat(req.query.maxPrice as string) : undefined,
-        categoryId: req.query.categoryId as string
-      };
-  
-      const products = await this.productService.getProducts(pagination, filters);
-      res.json(products);
+      const pagination = this.buildPaginationOptions(req.query);
+      const filters = this.buildProductFilters(req.query);
+      
+      const result = await this.productService.getProducts(pagination, filters);
+      this.sendPaginatedResponse(res, result);
     } catch (error) {
       this.handleError(error, res);
     }
@@ -128,21 +207,11 @@ export class ProductController {
   // Category Endpoints
   public getCategories = async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const pagination: PaginationOptions = {
-        page: req.query.page ? parseInt(req.query.page as string) : 1,
-        limit: req.query.limit ? parseInt(req.query.limit as string) : 10,
-        sortBy: req.query.sortBy as string,
-        sortOrder: req.query.sortOrder as 'asc' | 'desc'
-      };
-  
-      const filters: CategoryFilterOptions = {
-        search: req.query.search as string,
-        isActive: req.query.isActive === 'true',
-        parentId: req.query.parentId as string
-      };
-  
-      const categories = await this.productService.getCategories(pagination, filters);
-      res.json(categories);
+      const pagination = this.buildPaginationOptions(req.query);
+      const filters = this.buildCategoryFilters(req.query);
+      
+      const result = await this.productService.getCategories(pagination, filters);
+      this.sendPaginatedResponse(res, result);
     } catch (error) {
       this.handleError(error, res);
     }
@@ -219,23 +288,11 @@ export class ProductController {
   // Ingredient Endpoints
   public getIngredients = async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const pagination: PaginationOptions = {
-        page: req.query.page ? parseInt(req.query.page as string) : 1,
-        limit: req.query.limit ? parseInt(req.query.limit as string) : 10,
-        sortBy: req.query.sortBy as string,
-        sortOrder: req.query.sortOrder as 'asc' | 'desc'
-      };
-  
-      const filters: IngredientFilterOptions = {
-        search: req.query.search as string,
-        category: req.query.category as IngredientCategory,
-        supplierId: req.query.supplierId as string,
-        isExtra: req.query.isExtra === 'true',
-        minStock: req.query.minStock ? parseInt(req.query.minStock as string) : undefined
-      };
-  
-      const ingredients = await this.productService.getIngredients(pagination, filters);
-      res.json(ingredients);
+      const pagination = this.buildPaginationOptions(req.query);
+      const filters = this.buildIngredientFilters(req.query);
+      
+      const result = await this.productService.getIngredients(pagination, filters);
+      this.sendPaginatedResponse(res, result);
     } catch (error) {
       this.handleError(error, res);
     }
@@ -301,20 +358,11 @@ export class ProductController {
   // Supplier Endpoints
   public getSuppliers = async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const pagination: PaginationOptions = {
-        page: req.query.page ? parseInt(req.query.page as string) : 1,
-        limit: req.query.limit ? parseInt(req.query.limit as string) : 10,
-        sortBy: req.query.sortBy as string,
-        sortOrder: req.query.sortOrder as 'asc' | 'desc'
-      };
-  
-      const filters: SupplierFilterOptions = {
-        search: req.query.search as string,
-        hasIngredients: req.query.hasIngredients === 'true'
-      };
-  
-      const suppliers = await this.productService.getSuppliers(pagination, filters);
-      res.json(suppliers);
+      const pagination = this.buildPaginationOptions(req.query);
+      const filters = this.buildSupplierFilters(req.query);
+      
+      const result = await this.productService.getSuppliers(pagination, filters);
+      this.sendPaginatedResponse(res, result);
     } catch (error) {
       this.handleError(error, res);
     }
