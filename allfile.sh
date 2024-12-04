@@ -22,6 +22,7 @@ find $DIR \( \
   -path "*/backend/src/*"\
   \) \
   ! -path "*/node_modules/*" \
+  ! -path "*/seed/*" \
   ! -path "*/migrations/*" \
   ! -path "*/.next/*" \
   ! -path "*/build/*" \
