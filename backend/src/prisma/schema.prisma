@@ -321,15 +321,41 @@ model Certification {
 }
 
 model Role {
-  id            String         @id @default(uuid())
-  name          String
-  description   String?
-  permissions   Json[]
-  employeeRoles EmployeeRole[]
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+  id              String           @id @default(uuid())
+  name            String
+  description     String?
+  permissions     RolePermission[] // Changed from Json[] to relation
+  employeeRoles   EmployeeRole[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
 
   @@map("roles")
+}
+
+model Permission {
+  id            String   @id @default(uuid())
+  name          String   @unique
+  description   String?
+  hash          String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  roles         RolePermission[]
+
+  @@map("permissions")
+}
+
+model RolePermission {
+  id            String     @id @default(uuid())
+  roleId        String
+  permissionId  String
+  role          Role       @relation(fields: [roleId], references: [id])
+  permission    Permission @relation(fields: [permissionId], references: [id])
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  @@unique([roleId, permissionId])
+  @@map("role_permissions")
 }
 
 model EmployeeRole {
