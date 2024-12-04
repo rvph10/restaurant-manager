@@ -15,7 +15,7 @@ export class PermissionService {
 
   private async checkPermissionExists(permission: string): Promise<boolean> {
     try {
-        return permission in PERMISSIONS;
+      return permission in PERMISSIONS;
     } catch (error) {
       logger.error('Error checking permission:', error);
       throw error;
@@ -25,7 +25,8 @@ export class PermissionService {
   async createPermission(data: CreatePermissionInput): Promise<Permission> {
     try {
       // Check if permission already exists
-      if (!(await this.checkPermissionExists(data.name))) throw new Error('Permission does not exist');
+      if (!(await this.checkPermissionExists(data.name)))
+        throw new Error('Permission does not exist');
       const existingPermission = await prisma.permission.findFirst({
         where: { name: data.name },
       });

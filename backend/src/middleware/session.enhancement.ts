@@ -6,11 +6,12 @@ export const enhanceSession = (req: Request, res: Response, next: NextFunction) 
   if (!req.session.id) {
     req.session.id = uuidv4();
   }
-  
+
   // Regenerate session ID periodically
   if (req.session.created) {
     const age = Date.now() - new Date(req.session.created).getTime();
-    if (age > 6 * 60 * 60 * 1000) { // 6 hours
+    if (age > 6 * 60 * 60 * 1000) {
+      // 6 hours
       req.session.regenerate((err) => {
         if (err) next(err);
         req.session.created = new Date();

@@ -14,8 +14,8 @@ export const redisClient = createClient({
         return new Error('Too many retries on Redis');
       }
       return Math.min(retries * 50, 2000);
-    }
-  }
+    },
+  },
 });
 
 redisClient.connect().catch(console.error);
@@ -39,7 +39,7 @@ export const sessionConfig: session.SessionOptions = {
     sameSite: 'strict',
     maxAge: THIRTY_MINUTES,
     path: '/',
-    domain: process.env.NODE_ENV === 'production' ? '.yourdomain.com' : undefined
+    domain: process.env.NODE_ENV === 'production' ? '.yourdomain.com' : undefined,
   },
-  proxy: process.env.NODE_ENV === 'production'
+  proxy: process.env.NODE_ENV === 'production',
 };

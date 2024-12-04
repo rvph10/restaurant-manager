@@ -17,18 +17,18 @@ export class PermissionController {
       if (!req.user?.id) {
         throw new AppError(401, 'Authentication required');
       }
-  
+
       const { name, description } = req.body;
       if (!name) {
         throw new AppError(400, 'Permission name is required');
       }
-  
+
       const data: CreatePermissionInput = {
         name,
         description,
         user: req.user.id,
       };
-  
+
       const permission = await this.permissionService.createPermission(data);
 
       res.status(201).json({
@@ -38,9 +38,9 @@ export class PermissionController {
     } catch (error) {
       logger.error('Error in createPermission controller:', error);
       if (error instanceof AppError) {
-    throw error;
-  }
-  throw new AppError(500, 'Internal server error');
+        throw error;
+      }
+      throw new AppError(500, 'Internal server error');
     }
   };
 
@@ -55,9 +55,9 @@ export class PermissionController {
     } catch (error) {
       logger.error('Error in getPermissions controller:', error);
       if (error instanceof AppError) {
-    throw error;
-  }
-  throw new AppError(500, 'Internal server error');
+        throw error;
+      }
+      throw new AppError(500, 'Internal server error');
     }
   };
 
@@ -71,28 +71,28 @@ export class PermissionController {
     } catch (error) {
       logger.error('Error in getPermission controller:', error);
       if (error instanceof AppError) {
-    throw error;
-  }
-  throw new AppError(500, 'Internal server error');
+        throw error;
+      }
+      throw new AppError(500, 'Internal server error');
     }
-  }
+  };
 
   assignPermissionsToRole = async (req: AuthenticatedRequest, res: Response) => {
     try {
       if (!req.user?.id) {
         throw new AppError(401, 'Authentication required');
       }
-  
+
       const { permissions } = req.body;
       const { roleId } = req.params;
-  
+
       if (!roleId) {
         throw new AppError(400, 'Role ID is required');
       }
       if (!Array.isArray(permissions) || permissions.length === 0) {
         throw new AppError(400, 'Valid permissions array is required');
       }
-  
+
       const data: AssignPermissionInput = {
         roleId,
         permissions,
@@ -108,9 +108,9 @@ export class PermissionController {
     } catch (error) {
       logger.error('Error in assignPermissionsToRole controller:', error);
       if (error instanceof AppError) {
-    throw error;
-  }
-  throw new AppError(500, 'Internal server error');
+        throw error;
+      }
+      throw new AppError(500, 'Internal server error');
     }
   };
 
@@ -125,9 +125,9 @@ export class PermissionController {
     } catch (error) {
       logger.error('Error in getRolePermissions controller:', error);
       if (error instanceof AppError) {
-    throw error;
-  }
-  throw new AppError(500, 'Internal server error');
+        throw error;
+      }
+      throw new AppError(500, 'Internal server error');
     }
   };
 }

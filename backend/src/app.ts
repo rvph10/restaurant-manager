@@ -30,7 +30,7 @@ export const createApp = (): Express => {
           defaultSrc: ["'self'"],
           scriptSrc: ["'self'", "'unsafe-inline'"],
           styleSrc: ["'self'", "'unsafe-inline'"],
-          imgSrc: ["'self'", "data:", "https:"],
+          imgSrc: ["'self'", 'data:', 'https:'],
           connectSrc: ["'self'", process.env.CORS_ORIGIN || 'http://localhost:3000'],
           frameSrc: ["'none'"],
           objectSrc: ["'none'"],
@@ -38,10 +38,10 @@ export const createApp = (): Express => {
         },
       },
       crossOriginEmbedderPolicy: true,
-      crossOriginOpenerPolicy: { policy: "same-origin" },
-      crossOriginResourcePolicy: { policy: "same-site" },
+      crossOriginOpenerPolicy: { policy: 'same-origin' },
+      crossOriginResourcePolicy: { policy: 'same-site' },
       dnsPrefetchControl: { allow: false },
-      frameguard: { action: "deny" },
+      frameguard: { action: 'deny' },
       hsts: {
         maxAge: 31536000,
         includeSubDomains: true,
@@ -49,7 +49,7 @@ export const createApp = (): Express => {
       },
       ieNoOpen: true,
       noSniff: true,
-      referrerPolicy: { policy: "strict-origin-when-cross-origin" },
+      referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
       xssFilter: true,
     })
   );
@@ -61,7 +61,7 @@ export const createApp = (): Express => {
   app.use(session(sessionConfig));
   app.use(session(sessionConfig));
   app.use(enhanceSession as express.RequestHandler);
-app.use(validateCsrf as express.RequestHandler);
+  app.use(validateCsrf as express.RequestHandler);
 
   // Request logging middleware
   app.use((req: Request, res: Response, next: NextFunction) => {
