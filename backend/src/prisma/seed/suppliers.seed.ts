@@ -1,6 +1,5 @@
 import { PrismaClient } from '@prisma/client';
 import { logger } from '../../lib/logging/logger';
-import { log } from 'console';
 
 const prisma = new PrismaClient();
 
@@ -17,7 +16,7 @@ async function createSupplierWithProducts(supplier: any) {
 }
 
 export async function seedSuppliers() {
-    logger.info('📦 Seeding suppliers...');
+    logger.info('📦 Suppliers suppliers...');
     try {
         const suppliers =[
             {
@@ -44,7 +43,7 @@ export async function seedSuppliers() {
             await createSupplierWithProducts(supplier);
         }
 
-    logger.info('📦 Seeding seeded successfully');
+    logger.info('📦 Suppliers seeded successfully');
     } catch (error) {
         logger.error('📦 Error seeding suppliers:', error);
         throw error;

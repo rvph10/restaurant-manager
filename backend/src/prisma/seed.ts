@@ -4,6 +4,7 @@ import { seedPermissions } from './seed/permissions.seed';
 import { seedRoles } from './seed/roles.seed';
 import { seedCategories } from './seed/categories.seed';
 import { seedSuppliers } from './seed/suppliers.seed';
+import { seedIngredients } from './seed/ingredients.seed';
 
 const prisma = new PrismaClient();
 
@@ -93,6 +94,7 @@ async function main() {
     await seedRoles();
     await seedCategories();
     await seedSuppliers();
+    await seedIngredients();
     logger.info('Database seed completed successfully');
   } catch (error) {
     logger.error('Error seeding database:', error);
