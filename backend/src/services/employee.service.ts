@@ -1,5 +1,5 @@
 import { prisma } from '../prisma/client';
-import { PerformanceReview, Prisma, ShiftAssignment } from '@prisma/client';
+import { PerformanceReview, Permission, Prisma, ShiftAssignment } from '@prisma/client';
 import {
   CreateEmployeeInput,
   UpdateEmployeeInput,
