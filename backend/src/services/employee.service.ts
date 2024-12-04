@@ -331,38 +331,38 @@ export class EmployeeService {
       const page = filters?.page || 1;
       const limit = filters?.limit || 10;
       const skip = (page - 1) * limit;
-  
+
       const [employees, total] = await prisma.$transaction([
         prisma.employee.findMany({
           where: {
             ...(filters?.department && { department: { hasEvery: filters.department } }),
             ...(filters?.status && { status: filters.status }),
             ...(filters?.role && {
-              roles: { some: { role: { id: filters.role } } }
+              roles: { some: { role: { id: filters.role } } },
             }),
           },
           include: {
-            roles: { include: { role: true } }
+            roles: { include: { role: true } },
           },
           skip,
           take: limit,
-          orderBy: filters?.sortBy ? { [filters.sortBy]: filters.sortOrder } : undefined
+          orderBy: filters?.sortBy ? { [filters.sortBy]: filters.sortOrder } : undefined,
         }),
         prisma.employee.count({
           where: {
             ...(filters?.department && { department: { hasEvery: filters.department } }),
             ...(filters?.status && { status: filters.status }),
             ...(filters?.role && {
-              roles: { some: { role: { id: filters.role } } }
+              roles: { some: { role: { id: filters.role } } },
             }),
-          }
-        })
+          },
+        }),
       ]);
-  
+
       return {
         data: employees,
         total,
-        pages: Math.ceil(total / limit)
+        pages: Math.ceil(total / limit),
       };
     } catch (error) {
       return this.handleServiceError(error, 'getEmployees');
@@ -386,8 +386,8 @@ export class EmployeeService {
           name: data.name,
           description: data.description,
           permissions: {
-            create: data.permissions.map(permission => ({
-              permission: { connect: { id: permission } }
+            create: data.permissions.map((permission) => ({
+              permission: { connect: { id: permission } },
             })),
           },
         },
@@ -954,12 +954,12 @@ export class EmployeeService {
             { firstName: { contains: query, mode: 'insensitive' } },
             { lastName: { contains: query, mode: 'insensitive' } },
             { email: { contains: query, mode: 'insensitive' } },
-            { phone: { contains: query } }
-          ]
+            { phone: { contains: query } },
+          ],
         },
         include: {
-          roles: { include: { role: true } }
-        }
+          roles: { include: { role: true } },
+        },
       });
     } catch (error) {
       return this.handleServiceError(error, 'searchEmployees');

@@ -26,92 +26,90 @@ interface EmployeeWithRoles extends Employee {
 }
 
 function sanitizeInput(input: string): string {
-    return input.replace(/[^a-zA-Z0-9:_-]/g, '');
-  }
+  return input.replace(/[^a-zA-Z0-9:_-]/g, '');
+}
 
 function verifyPermissionHash(permission: string, storedHash: string): boolean {
-    const sanitizedPermission = sanitizeInput(permission);
-    const computedHash = crypto.createHash('sha256').update(sanitizedPermission).digest('hex');
-    return crypto.timingSafeEqual(Buffer.from(computedHash), Buffer.from(storedHash));
+  const sanitizedPermission = sanitizeInput(permission);
+  const computedHash = crypto.createHash('sha256').update(sanitizedPermission).digest('hex');
+  return crypto.timingSafeEqual(Buffer.from(computedHash), Buffer.from(storedHash));
+}
+
+async function getUserPermissions(userId: string): Promise<string[]> {
+  // Check cache first
+  const cacheKey = `permissions:${userId}`;
+  const cached = await redisManager.get(cacheKey);
+
+  if (cached) {
+    return cached;
   }
 
+  // If not cached, get from database
+  const userWithRoles = (await prisma.employee.findUnique({
+    where: { id: userId },
+    include: {
+      roles: {
+        include: {
+          role: {
+            include: {
+              permissions: {
+                include: {
+                  permission: true,
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  })) as EmployeeWithRoles | null;
 
-
-  async function getUserPermissions(userId: string): Promise<string[]> {
-    // Check cache first
-    const cacheKey = `permissions:${userId}`;
-    const cached = await redisManager.get(cacheKey);
-    
-    if (cached) {
-      return cached;
-    }
-  
-    // If not cached, get from database
-    const userWithRoles = await prisma.employee.findUnique({
-      where: { id: userId },
-      include: {
-        roles: {
-          include: {
-            role: {
-              include: {
-                permissions: {
-                  include: {
-                    permission: true
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    }) as EmployeeWithRoles | null;
-  
-    if (!userWithRoles) {
-      return [];
-    }
-  
-    const permissions = userWithRoles.roles.flatMap(employeeRole => 
-      employeeRole.role.rolePermissions
-        .filter(rp => verifyPermissionHash(rp.permission.name, rp.permission.hash))
-        .map(rp => rp.permission.name)
-    );
-  
-    // Cache the permissions
-    await redisManager.set(cacheKey, permissions, CACHE_TTL);
-  
-    return permissions;
+  if (!userWithRoles) {
+    return [];
   }
 
-  // I must call this when update user roles, update role permissions, delete role
-  export const invalidateUserPermissionCache = async (userId: string): Promise<void> => {
-    const cacheKey = `permissions:${userId}`;
-    await redisManager.delete(cacheKey);
-  };
-  
-  export const hasPermission = (requiredPermission: Permission) => {
-    return async (req: AuthenticatedRequest, _res: Response, next: NextFunction) => {
-      try {
-        const userId = req.user?.id;
-        
-        if (!userId) {
-          throw new AppError(401, 'Authentication required');
-        }
-  
-        const userPermissions = await getUserPermissions(userId);
-        if (!userPermissions.includes(requiredPermission)) {
-            await auditLog('PERMISSION_DENIED', {
-              userId,
-              requiredPermission,
-              path: req.path,
-              method: req.method,
-              ip: req.ip
-            });
-            throw new AppError(403, 'Insufficient permissions');
-          }
-  
-        next();
-      } catch (error) {
-        next(error);
+  const permissions = userWithRoles.roles.flatMap((employeeRole) =>
+    employeeRole.role.rolePermissions
+      .filter((rp) => verifyPermissionHash(rp.permission.name, rp.permission.hash))
+      .map((rp) => rp.permission.name)
+  );
+
+  // Cache the permissions
+  await redisManager.set(cacheKey, permissions, CACHE_TTL);
+
+  return permissions;
+}
+
+// I must call this when update user roles, update role permissions, delete role
+export const invalidateUserPermissionCache = async (userId: string): Promise<void> => {
+  const cacheKey = `permissions:${userId}`;
+  await redisManager.delete(cacheKey);
+};
+
+export const hasPermission = (requiredPermission: Permission) => {
+  return async (req: AuthenticatedRequest, _res: Response, next: NextFunction) => {
+    try {
+      const userId = req.user?.id;
+
+      if (!userId) {
+        throw new AppError(401, 'Authentication required');
       }
-    };
+
+      const userPermissions = await getUserPermissions(userId);
+      if (!userPermissions.includes(requiredPermission)) {
+        await auditLog('PERMISSION_DENIED', {
+          userId,
+          requiredPermission,
+          path: req.path,
+          method: req.method,
+          ip: req.ip,
+        });
+        throw new AppError(403, 'Insufficient permissions');
+      }
+
+      next();
+    } catch (error) {
+      next(error);
+    }
   };
+};

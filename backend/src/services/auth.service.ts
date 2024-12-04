@@ -39,23 +39,23 @@ export class AuthService {
       where: { id: employeeId },
       data: {
         failedAttempts: {
-          increment: 1
-        }
-      }
+          increment: 1,
+        },
+      },
     });
-  
+
     const employee = await this.prisma.employee.findUnique({
-      where: { id: employeeId }
+      where: { id: employeeId },
     });
-  
+
     if (employee && employee.failedAttempts >= 5) {
       const lockUntil = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
       await this.prisma.employee.update({
         where: { id: employeeId },
         data: {
           lockedUntil: lockUntil,
-          failedAttempts: 0
-        }
+          failedAttempts: 0,
+        },
       });
     }
   }
@@ -172,46 +172,46 @@ export class AuthService {
 
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
     const employee = await this.prisma.employee.findUnique({
-  where: { email: credentials.email.toLowerCase() },
-  include: {
-    roles: {
+      where: { email: credentials.email.toLowerCase() },
       include: {
-        role: true,
+        roles: {
+          include: {
+            role: true,
+          },
+        },
       },
-    },
-  },
-});
+    });
 
-if (!employee) {
-  throw new AppError(401, 'Invalid credentials');
-}
+    if (!employee) {
+      throw new AppError(401, 'Invalid credentials');
+    }
 
-// Check if account is locked
-if (employee.lockedUntil && employee.lockedUntil > new Date()) {
-  throw new AppError(401, 'Account is temporarily locked. Please try again later');
-}
+    // Check if account is locked
+    if (employee.lockedUntil && employee.lockedUntil > new Date()) {
+      throw new AppError(401, 'Account is temporarily locked. Please try again later');
+    }
 
-const isPasswordValid = await bcrypt.compare(credentials.password, employee.password);
-if (!isPasswordValid) {
-  await this.handleFailedLogin(employee.id, credentials.ip);
-  throw new AppError(401, 'Invalid credentials');
-}
+    const isPasswordValid = await bcrypt.compare(credentials.password, employee.password);
+    if (!isPasswordValid) {
+      await this.handleFailedLogin(employee.id, credentials.ip);
+      throw new AppError(401, 'Invalid credentials');
+    }
 
-// Reset failed attempts on successful login
-await this.prisma.employee.update({
-  where: { id: employee.id },
-  data: {
-    failedAttempts: 0,
-    lockedUntil: null
-  }
-});
+    // Reset failed attempts on successful login
+    await this.prisma.employee.update({
+      where: { id: employee.id },
+      data: {
+        failedAttempts: 0,
+        lockedUntil: null,
+      },
+    });
 
     const sessionId = uuid();
     const token = this.generateToken({
       userId: employee.id,
       roles: employee.roles.map((r) => r.role.name),
     });
-    
+
     auditLog(
       'LOGIN',
       {
@@ -220,7 +220,7 @@ await this.prisma.employee.update({
       },
       employee.id
     );
-    
+
     return {
       user: {
         id: employee.id,

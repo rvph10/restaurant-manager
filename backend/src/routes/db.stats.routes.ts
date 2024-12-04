@@ -6,19 +6,19 @@ import { logger } from '../lib/logging/logger';
 const router = Router();
 
 router.get('/', async (req, res) => {
-    try {
-        const stats = await getDatabaseStats();
-        res.json({
-            status: 'success',
-            data: stats
-        });
-    } catch (error) {
-        logger.error('Error fetching database stats:', error);
-        res.status(500).json({
-            status: 'error',
-            message: 'Failed to fetch database statistics'
-        });
-    }
+  try {
+    const stats = await getDatabaseStats();
+    res.json({
+      status: 'success',
+      data: stats,
+    });
+  } catch (error) {
+    logger.error('Error fetching database stats:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to fetch database statistics',
+    });
+  }
 });
 
 export { router as dbStatsRouter };
