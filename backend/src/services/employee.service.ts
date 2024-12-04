@@ -386,7 +386,9 @@ export class EmployeeService {
           name: data.name,
           description: data.description,
           permissions: {
-            set: data.permissions,
+            create: data.permissions.map(permission => ({
+              permission: { connect: { id: permission } }
+            })),
           },
         },
       });

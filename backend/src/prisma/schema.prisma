@@ -324,7 +324,7 @@ model Role {
   id              String           @id @default(uuid())
   name            String
   description     String?
-  permissions     RolePermission[] // Changed from Json[] to relation
+  permissions     RolePermission[]
   employeeRoles   EmployeeRole[]
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
