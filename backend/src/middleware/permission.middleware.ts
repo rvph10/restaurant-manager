@@ -3,7 +3,12 @@ import { prisma } from '../prisma/client';
 import { AppError } from './error.handler';
 import { Permission } from '../constants/permission';
 import { AuthenticatedRequest } from '../types/express';
+import crypto from 'crypto';
+import { auditLog } from '../lib/logging/logger';
 import { Employee, EmployeeRole, Role, RolePermission } from '@prisma/client';
+import { redisManager } from '../lib/redis/redis.manager';
+
+const CACHE_TTL = 300; // 5 minutes
 
 // Define proper nested types based on Prisma schema
 interface EmployeeWithRoles extends Employee {
@@ -20,53 +25,93 @@ interface EmployeeWithRoles extends Employee {
   })[];
 }
 
-export const hasPermission = (requiredPermission: Permission) => {
-  return async (req: AuthenticatedRequest, _res: Response, next: NextFunction) => {
-    try {
-      const userId = req.user?.id;
-      
-      if (!userId) {
-        throw new AppError(401, 'Authentication required');
-      }
+function sanitizeInput(input: string): string {
+    return input.replace(/[^a-zA-Z0-9:_-]/g, '');
+  }
 
-      // Get user's roles and permissions
-      const userWithRoles = await prisma.employee.findUnique({
-        where: { id: userId },
-        include: {
-          roles: {
-            include: {
-              role: {
-                include: {
-                  permissions: {
-                    include: {
-                      permission: true
-                    }
+function verifyPermissionHash(permission: string, storedHash: string): boolean {
+    const sanitizedPermission = sanitizeInput(permission);
+    const computedHash = crypto.createHash('sha256').update(sanitizedPermission).digest('hex');
+    return crypto.timingSafeEqual(Buffer.from(computedHash), Buffer.from(storedHash));
+  }
+
+
+
+  async function getUserPermissions(userId: string): Promise<string[]> {
+    // Check cache first
+    const cacheKey = `permissions:${userId}`;
+    const cached = await redisManager.get(cacheKey);
+    
+    if (cached) {
+      return cached;
+    }
+  
+    // If not cached, get from database
+    const userWithRoles = await prisma.employee.findUnique({
+      where: { id: userId },
+      include: {
+        roles: {
+          include: {
+            role: {
+              include: {
+                permissions: {
+                  include: {
+                    permission: true
                   }
                 }
               }
             }
           }
         }
-      }) as EmployeeWithRoles | null;
-
-      if (!userWithRoles) {
-        throw new AppError(404, 'User not found');
       }
-
-      // Check if user has the required permission
-      const hasRequiredPermission = userWithRoles.roles.some(employeeRole => 
-        employeeRole.role.rolePermissions.some(rp => 
-          rp?.permission?.name === requiredPermission
-        )
-      );
-
-      if (!hasRequiredPermission) {
-        throw new AppError(403, 'Insufficient permissions');
-      }
-
-      next();
-    } catch (error) {
-      next(error);
+    }) as EmployeeWithRoles | null;
+  
+    if (!userWithRoles) {
+      return [];
     }
+  
+    const permissions = userWithRoles.roles.flatMap(employeeRole => 
+      employeeRole.role.rolePermissions
+        .filter(rp => verifyPermissionHash(rp.permission.name, rp.permission.hash))
+        .map(rp => rp.permission.name)
+    );
+  
+    // Cache the permissions
+    await redisManager.set(cacheKey, permissions, CACHE_TTL);
+  
+    return permissions;
+  }
+
+  // I must call this when update user roles, update role permissions, delete role
+  export const invalidateUserPermissionCache = async (userId: string): Promise<void> => {
+    const cacheKey = `permissions:${userId}`;
+    await redisManager.delete(cacheKey);
   };
-};
+  
+  export const hasPermission = (requiredPermission: Permission) => {
+    return async (req: AuthenticatedRequest, _res: Response, next: NextFunction) => {
+      try {
+        const userId = req.user?.id;
+        
+        if (!userId) {
+          throw new AppError(401, 'Authentication required');
+        }
+  
+        const userPermissions = await getUserPermissions(userId);
+        if (!userPermissions.includes(requiredPermission)) {
+            await auditLog('PERMISSION_DENIED', {
+              userId,
+              requiredPermission,
+              path: req.path,
+              method: req.method,
+              ip: req.ip
+            });
+            throw new AppError(403, 'Insufficient permissions');
+          }
+  
+        next();
+      } catch (error) {
+        next(error);
+      }
+    };
+  };

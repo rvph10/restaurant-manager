@@ -15,3 +15,11 @@ export const registerLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 });
+
+export const permissionCheckLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100,
+  message: 'Too many permission checks, please try again later',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
