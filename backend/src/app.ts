@@ -1,4 +1,5 @@
 import express, { Express, Request, Response, NextFunction } from 'express';
+import { enhanceSession, validateCsrf } from './middleware/session.enhancement';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import { prisma } from './prisma/client';
@@ -58,6 +59,9 @@ export const createApp = (): Express => {
   app.use(requestLogger);
   app.use(cookieParser());
   app.use(session(sessionConfig));
+  app.use(session(sessionConfig));
+  app.use(enhanceSession as express.RequestHandler);
+app.use(validateCsrf as express.RequestHandler);
 
   // Request logging middleware
   app.use((req: Request, res: Response, next: NextFunction) => {

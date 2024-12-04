@@ -1,6 +1,7 @@
 import { config } from 'dotenv';
 import { createApp } from './app';
 import { prisma } from './prisma/client';
+import { SessionService } from './services/session.service';
 import { logger } from './lib/logging/logger';
 import http from 'http';
 
@@ -56,6 +57,7 @@ async function bootstrap() {
     server.listen(port, () => {
       logger.info(`Server is running on port ${port}`);
       logger.info(`Environment: ${process.env.NODE_ENV}`);
+      SessionService.startCleanup(); // Add this line
     });
 
     // Handle graceful shutdown
