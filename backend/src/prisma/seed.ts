@@ -1,70 +1,67 @@
 import { PrismaClient } from '@prisma/client';
 import { logger } from '../lib/logging/logger';
 
-// Import individual seeders
-// import { seedProducts } from './seeds/products.seed';
-
 const prisma = new PrismaClient();
 
 async function clearDatabase() {
   const tablesToClear = [
-    'restaurant',
-    'tax_configuration',
-    'delivery_zone',
-    'customer',
-    'cart',
-    'cart_item',
-    'customer_address',
-    'employee',
-    'employee_document',
-    'certification',
-    'role',
-    'permission',
-    'role_permission',
-    'employee_role',
-    'performance_review',
-    'time_off',
-    'break',
-    'shift',
-    'shift_section',
-    'shift_task',
-    'shift_assignement',
-    'scheduled_break',
-    'audit_log',
-    'actual_break',
-    'menu',
-    'menu_item',
-    'category',
-    'product',
-    'product_ingredient',
-    'ingredient',
-    'ingredient_stock_log',
-    'supplier',
-    'order',
-    'order_item',
-    'table',
-    'reservation',
-    'notification_template',
-    'notification',
-    'announcement',
-    'announcement_acknowledgement',
-    'sales_metric',
-    'staff_metric',
-    'customer_metric',
-    'inventory_metric',
-    'report_schedule',
-    'campaign',
-    'promotion',
-    'discount_code',
-    'happy_hour',
+    'restaurants',
+    'tax_configurations',
+    'delivery_zones',
+    'customers',
+    'carts',
+    'cart_items',
+    'customer_addresses',
+    'employees',
+    'employee_documents',
+    'certifications',
+    'roles',
+    'permissions',
+    'role_permissions',
+    'employee_roles',
+    'performance_reviews',
+    'timeoffs',
+    'breaks',
+    'shifts',
+    'shift_sections',
+    'shift_tasks',
+    'shift_assignments',
+    'scheduled_breaks',
+    'audit_logs',
+    'actual_breaks',
+    'menus',
+    'menu_items',
+    'categories',
+    'products',
+    'product_ingredients',
+    'ingredients',
+    'ingredient_stock_logs',
+    'suppliers',
+    'orders',
+    'order_items',
+    'tables',
+    'reservations',
+    'notification_templates',
+    'notifications',
+    'announcements',
+    'announcement_acknowledgments',
+    'sales_metrics',
+    'staff_metrics',
+    'customer_metrics',
+    'inventory_metrics',
+    'report_schedules',
+    'campaigns',
+    'promotions',
+    'discount_codes',
+    'happy_hours',
     'promotion_usage',
-    'kitchen_station',
-    'kitchen_staff_assignement',
-    'kitchen_queue',
-    'kitchen_order_item',
-    'production_line',
-    'production_production_step',
-    'station_step',
+    'kitchen_stations',
+    'kitchen_staff_assignments',
+    'kitchen_queues',
+    'kitchen_order_items',
+    'production_lines',
+    'production_steps',
+    'station_steps',
     'order_progress',
     'step_progress',
   ];
@@ -73,25 +70,24 @@ async function clearDatabase() {
     try {
       await prisma.$executeRawUnsafe(`TRUNCATE TABLE "${table}" CASCADE;`);
       logger.info(`Cleared table: ${table}`);
-    } catch (error) {
-      logger.error(`Error clearing table ${table}:`, error);
-      throw error;
+    } catch (error: any) {
+      if (error.code === 'P2010' && error.meta?.code === '42P01') {
+        logger.warn(`Table ${table} does not exist, skipping...`);
+      } else {
+        logger.error(`Error clearing table ${table}:`, error);
+        throw error;
+      }
     }
   }
 }
 
 async function main() {
   logger.info('Starting database seed...');
-
   try {
-    // Clear all tables first
     await clearDatabase();
-    logger.info('Database cleared successfully');
-
-    // Seed in specific order due to dependencies
+    // Add your seed functions here
     // await seedProducts();
-
-    logger.info('Database seeded successfully');
+    logger.info('Database seed completed successfully.');
   } catch (error) {
     logger.error('Error seeding database:', error);
     throw error;
@@ -100,8 +96,7 @@ async function main() {
   }
 }
 
-main()
-  .catch((error) => {
-    logger.error('Fatal error during seeding:', error);
-    process.exit(1);
-  });
+main().catch((error) => {
+  logger.error('Fatal error during seeding:', error);
+  process.exit(1);
+});
