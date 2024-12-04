@@ -22,6 +22,12 @@ export const PERMISSIONS = {
   ORDER_READ: 'order:read',
   ORDER_UPDATE: 'order:update',
   ORDER_DELETE: 'order:delete',
+
+  // Permission Management
+  PERMISSION_CREATE: 'permission:create',
+  PERMISSION_READ: 'permission:read',
+  PERMISSION_UPDATE: 'permission:update',
+  PERMISSION_DELETE: 'permission:delete',
 } as const;
 
-export type Permission = keyof typeof PERMISSIONS;
+export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];

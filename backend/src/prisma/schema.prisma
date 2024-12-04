@@ -532,7 +532,6 @@ model ShiftAssignment {
   @@map("shift_assignments")
 }
 
-// Update related models to reference ShiftAssignment instead of Shift
 model ScheduledBreak {
   id                String          @id @default(uuid())
   shiftAssignmentId String
@@ -1288,7 +1287,6 @@ model ProductionStep {
   estimatedTime      Int?
   alertAfter         Int?
   toPrepare          Category[]     @relation("CategoryToPrepare")
-  // Stations at this step
   stations           StationStep[]
 
   createdAt DateTime @default(now())
