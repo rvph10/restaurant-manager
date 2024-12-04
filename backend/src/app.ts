@@ -22,7 +22,36 @@ export const createApp = (): Express => {
       credentials: true,
     })
   );
-  app.use(helmet());
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'self'"],
+          scriptSrc: ["'self'", "'unsafe-inline'"],
+          styleSrc: ["'self'", "'unsafe-inline'"],
+          imgSrc: ["'self'", "data:", "https:"],
+          connectSrc: ["'self'", process.env.CORS_ORIGIN || 'http://localhost:3000'],
+          frameSrc: ["'none'"],
+          objectSrc: ["'none'"],
+          upgradeInsecureRequests: [],
+        },
+      },
+      crossOriginEmbedderPolicy: true,
+      crossOriginOpenerPolicy: { policy: "same-origin" },
+      crossOriginResourcePolicy: { policy: "same-site" },
+      dnsPrefetchControl: { allow: false },
+      frameguard: { action: "deny" },
+      hsts: {
+        maxAge: 31536000,
+        includeSubDomains: true,
+        preload: true,
+      },
+      ieNoOpen: true,
+      noSniff: true,
+      referrerPolicy: { policy: "strict-origin-when-cross-origin" },
+      xssFilter: true,
+    })
+  );
   app.use(compression());
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
