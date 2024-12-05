@@ -9,8 +9,7 @@ export async function seedCustomers() {
   try {
     const customerData = [];
 
-    // Create 50 customers
-    for (let i = 1; i <= 50; i++) {
+    for (let i = 1; i <= 15; i++) {
       const hashedPassword = await bcrypt.hash('password123', 10);
 
       customerData.push({

@@ -1027,8 +1027,11 @@ export async function seedProducts() {
                 name: choice.name,
                 priceModifier:
                   choice.priceModifiers.length > 0
-                    ? new Decimal(choice.priceModifiers[0].value)
-                    : new Decimal(0),
+                    ? choice.priceModifiers.map((modifier) => ({
+                        type: modifier.type,
+                        value: new Decimal(modifier.value),
+                      }))
+                    : [],
               },
             });
 
