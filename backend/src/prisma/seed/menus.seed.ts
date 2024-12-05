@@ -20,7 +20,7 @@ export async function seedMenus() {
     const burgerCombo = await prisma.menu.create({
       data: {
         name: "Burger Lover's Combo",
-        description: "Choose your favorite burger with sides and a drink",
+        description: 'Choose your favorite burger with sides and a drink',
         type: MenuType.COMBO,
         isActive: true,
         isAvailable: true,
