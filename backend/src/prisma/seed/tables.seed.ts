@@ -4,6 +4,7 @@ import { logger } from '../../lib/logging/logger';
 const prisma = new PrismaClient();
 
 export async function seedTables() {
+    logger.info('🪑 Seeding tables...');
   try {
     // Create 20 tables with different capacities
     const tableConfigurations = [
@@ -27,7 +28,7 @@ export async function seedTables() {
       }
     }
 
-    logger.info('Tables seeded successfully');
+    logger.info('🪑 Tables seeded successfully');
   } catch (error) {
     logger.error('Error seeding tables:', error);
     throw error;

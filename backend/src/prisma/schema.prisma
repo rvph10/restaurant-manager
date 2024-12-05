@@ -585,35 +585,86 @@ model Menu {
   description String?
   type        MenuType
   isActive    Boolean  @default(true)
-  basePrice   Decimal  @db.Decimal(10, 2)
 
   // Availability
-  isAvailable Boolean   @default(true)
-  startDate   DateTime?
-  endDate     DateTime?
-  startTime   String?
-  endTime     String?
-  daysOfWeek  Weekday[]
+  isAvailable Boolean @default(true)
 
-  // Categorization
-  category String
+  // Timing configuration
+  startDate  DateTime?
+  endDate    DateTime?
+  startTime  String? // Time of day format "HH:mm"
+  endTime    String? // Time of day format "HH:mm"
+  daysOfWeek Weekday[]
 
-  // Menu Structure
-  requiresMainItem Boolean @default(true)
-  mainItemCategory String?
-
-  // Menu Components
-  allowedSides        String[]
-  allowedDrinks       String[]
-  includedSidesCount  Int      @default(1)
-  includedDrinksCount Int      @default(1)
-
-  items MenuItem[]
+  // New fields for combo handling
+  items      MenuItem[]
+  groups     MenuGroup[]    // New relation
+  fixedItems MenuFixedItem[] // New relation
+  basePrice  Decimal?      @db.Decimal(10, 2)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@map("menus")
+}
+
+// New model for handling groups of choices in a combo
+model MenuGroup {
+  id          String     @id @default(uuid())
+  menuId      String
+  menu        Menu       @relation(fields: [menuId], references: [id])
+  name        String     // e.g., "Choose your pizza", "Select sides"
+  minSelect   Int        @default(1)  // Minimum items to select from this group
+  maxSelect   Int        // Maximum items to select from this group
+  sequence    Int        @default(0)  // Order of display
+  products    MenuGroupProduct[] // Products that can be selected in this group
+  isRequired  Boolean    @default(true)
+  description String?
+
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@map("menu_groups")
+}
+
+// New model for handling product options within a group
+model MenuGroupProduct {
+  id          String    @id @default(uuid())
+  groupId     String
+  group       MenuGroup @relation(fields: [groupId], references: [id])
+  productId   String
+  product     Product   @relation(fields: [productId], references: [id])
+  sequence    Int       @default(0)
+  
+  // Override product options for this combo
+  overrideOptions Json?  // Specify which options/choices are allowed in combo
+  maxQuantity     Int?   // Maximum quantity of this product in the group
+  specialPrice    Decimal? @db.Decimal(10, 2)  // Special price when part of this combo
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("menu_group_products")
+}
+
+// New model for fixed items in a combo (non-selectable, included items)
+model MenuFixedItem {
+  id          String   @id @default(uuid())
+  menuId      String
+  menu        Menu     @relation(fields: [menuId], references: [id])
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id])
+  quantity    Int      @default(1)
+  sequence    Int      @default(0)
+  description String?  // Optional description for this fixed item
+  
+  // Fixed configuration for product options
+  fixedOptions Json?   // Specify exactly which options/choices are included
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("menu_fixed_items")
 }
 
 model MenuItem {
@@ -694,6 +745,8 @@ model Product {
   nutritionalInfo Json?
   ingredients     ProductIngredient[]
   menuItems       MenuItem[]
+  menuGroupProducts MenuGroupProduct[]
+  menuFixedItems    MenuFixedItem[]
   cartItems       CartItem[]
   orderItems      OrderItem[]
   options         ProductOption[]

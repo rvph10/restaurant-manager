@@ -5,6 +5,7 @@ import bcrypt from 'bcryptjs';
 const prisma = new PrismaClient();
 
 export async function seedCustomers() {
+  logger.info('👥 Seeding customers...');
   try {
     const customerData = [];
     
@@ -44,7 +45,7 @@ export async function seedCustomers() {
       });
     }
 
-    logger.info('Customers seeded successfully');
+    logger.info('👥 Customers seeded successfully');
   } catch (error) {
     logger.error('Error seeding customers:', error);
     throw error;
