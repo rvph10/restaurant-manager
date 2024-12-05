@@ -585,20 +585,30 @@ model Menu {
   description String?
   type        MenuType
   isActive    Boolean  @default(true)
+  basePrice   Decimal  @db.Decimal(10, 2)
 
   // Availability
   isAvailable Boolean @default(true)
+  startDate   DateTime?
+  endDate     DateTime?
+  startTime   String?
+  endTime     String?
+  daysOfWeek  Weekday[]
 
-  // Timing configuration
-  startDate  DateTime?
-  endDate    DateTime?
-  startTime  String? // Time of day format "HH:mm"
-  endTime    String? // Time of day format "HH:mm"
-  daysOfWeek Weekday[]
+  // Categorization
+  category    String
+  
+  // Menu Structure
+  requiresMainItem Boolean @default(true)
+  mainItemCategory String?
+  
+  // Menu Components
+  allowedSides        String[]
+  allowedDrinks       String[]
+  includedSidesCount  Int       @default(1)
+  includedDrinksCount Int       @default(1)
 
   items MenuItem[]
-
-  basePrice Decimal? @db.Decimal(10, 2)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -606,17 +616,47 @@ model Menu {
   @@map("menus")
 }
 
-model MenuItem {
-  id        String  @id @default(uuid())
-  menuId    String
-  menu      Menu    @relation(fields: [menuId], references: [id])
-  productId String
-  product   Product @relation(fields: [productId], references: [id])
+model Combo {
+  id          String    @id @default(uuid())
+  name        String
+  description String?
+  price       Decimal   @db.Decimal(10, 2)
+  image       String?
+  isAvailable Boolean   @default(true)
+  products    ComboProduct[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
+  @@map("combos")
+}
+
+model ComboProduct {
+  id             String   @id @default(uuid())
+  comboId        String
+  productId      String
+  quantity       Int      @default(1)
+  selectedOption String?
+  includeBox     Boolean  @default(false)
+  combo          Combo    @relation(fields: [comboId], references: [id])
+  product        Product  @relation(fields: [productId], references: [id])
+
+  @@index([comboId])
+  @@index([productId])
+  @@map("combo_products")
+}
+
+model MenuItem {
+  id          String  @id @default(uuid())
+  menuId      String
+  menu        Menu    @relation(fields: [menuId], references: [id])
+  productId   String
+  product     Product @relation(fields: [productId], references: [id])
+  itemType    String  // "MAIN", "SIDE", "DRINK", "ADDON"
+  
   // For combo/set menu configuration
-  isRequired  Boolean @default(false)
-  maxQuantity Int?
-  sequence    Int     @default(0)
+  isRequired   Boolean @default(false)
+  maxQuantity  Int?
+  sequence     Int     @default(0)
 
   // Special pricing for this menu
   specialPrice Decimal? @db.Decimal(10, 2)
@@ -686,6 +726,7 @@ model Product {
   cartItems       CartItem[]
   orderItems      OrderItem[]
   options    ProductOption[]
+  comboProducts    ComboProduct[]
   createdAt       DateTime             @default(now())
   updatedAt       DateTime             @updatedAt
 
@@ -693,8 +734,6 @@ model Product {
   @@index([isAvailable])
   @@map("products")
 }
-
-
 
 model ProductIngredient {
   id           String     @id @default(uuid())

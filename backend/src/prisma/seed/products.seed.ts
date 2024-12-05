@@ -594,7 +594,7 @@ const products: productData[] = [
                     {
                         name: 'Yes',
                         priceModifiers: [],
-                        ingredients: [{name: 'Fries Takeout Box', quantity: 1, unit: MeasurementUnit.PIECE}]
+                        ingredients: [{name: 'Nugget Takeout Box', quantity: 1, unit: MeasurementUnit.PIECE}]
                     },
                     {
                         name: 'No',
