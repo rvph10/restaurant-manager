@@ -588,7 +588,7 @@ model Menu {
   basePrice   Decimal  @db.Decimal(10, 2)
 
   // Availability
-  isAvailable Boolean @default(true)
+  isAvailable Boolean   @default(true)
   startDate   DateTime?
   endDate     DateTime?
   startTime   String?
@@ -596,17 +596,17 @@ model Menu {
   daysOfWeek  Weekday[]
 
   // Categorization
-  category    String
-  
+  category String
+
   // Menu Structure
   requiresMainItem Boolean @default(true)
   mainItemCategory String?
-  
+
   // Menu Components
   allowedSides        String[]
   allowedDrinks       String[]
-  includedSidesCount  Int       @default(1)
-  includedDrinksCount Int       @default(1)
+  includedSidesCount  Int      @default(1)
+  includedDrinksCount Int      @default(1)
 
   items MenuItem[]
 
@@ -615,18 +615,19 @@ model Menu {
 
   @@map("menus")
 }
+
 model MenuItem {
-  id          String  @id @default(uuid())
-  menuId      String
-  menu        Menu    @relation(fields: [menuId], references: [id])
-  productId   String
-  product     Product @relation(fields: [productId], references: [id])
-  itemType    String  // "MAIN", "SIDE", "DRINK", "ADDON"
-  
+  id        String  @id @default(uuid())
+  menuId    String
+  menu      Menu    @relation(fields: [menuId], references: [id])
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  itemType  String // "MAIN", "SIDE", "DRINK", "ADDON"
+
   // For combo/set menu configuration
-  isRequired   Boolean @default(false)
-  maxQuantity  Int?
-  sequence     Int     @default(0)
+  isRequired  Boolean @default(false)
+  maxQuantity Int?
+  sequence    Int     @default(0)
 
   // Special pricing for this menu
   specialPrice Decimal? @db.Decimal(10, 2)
@@ -657,13 +658,13 @@ model Category {
 }
 
 model ProductOption {
-  id          String        @id @default(uuid())
-  productId   String
-  product     Product       @relation(fields: [productId], references: [id])
-  name        String
-  choices     OptionChoice[]
-  required    Boolean       @default(true)
-  
+  id        String         @id @default(uuid())
+  productId String
+  product   Product        @relation(fields: [productId], references: [id])
+  name      String
+  choices   OptionChoice[]
+  required  Boolean        @default(true)
+
   @@map("product_options")
 }
 
@@ -673,7 +674,7 @@ model OptionChoice {
   productOption   ProductOption @relation(fields: [productOptionId], references: [id])
   name            String
   priceModifier   Json
-  
+
   @@map("option_choices")
 }
 
@@ -695,7 +696,7 @@ model Product {
   menuItems       MenuItem[]
   cartItems       CartItem[]
   orderItems      OrderItem[]
-  options    ProductOption[]
+  options         ProductOption[]
   createdAt       DateTime             @default(now())
   updatedAt       DateTime             @updatedAt
 
@@ -705,16 +706,16 @@ model Product {
 }
 
 model ProductIngredient {
-  id           String     @id @default(uuid())
+  id           String          @id @default(uuid())
   productId    String
-  product      Product    @relation(fields: [productId], references: [id])
+  product      Product         @relation(fields: [productId], references: [id])
   ingredientId String
-  ingredient   Ingredient @relation(fields: [ingredientId], references: [id])
-  quantity     Decimal    @db.Decimal(10, 3)
+  ingredient   Ingredient      @relation(fields: [ingredientId], references: [id])
+  quantity     Decimal         @db.Decimal(10, 3)
   unit         MeasurementUnit
-  isOptional   Boolean    @default(false)
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
+  isOptional   Boolean         @default(false)
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
 
   @@map("product_ingredients")
 }
@@ -741,8 +742,6 @@ model Ingredient {
 
   @@map("ingredients")
 }
-
-
 
 model IngredientStockLog {
   id           String       @id @default(uuid())
@@ -801,8 +800,8 @@ model OrderItem {
   product         Product         @relation(fields: [productId], references: [id])
   quantity        Int
   unitPrice       Decimal         @db.Decimal(10, 2)
-  modifications    Json?
-  extraPrice      Decimal         @db.Decimal(10, 2) @default(0)
+  modifications   Json?
+  extraPrice      Decimal         @default(0) @db.Decimal(10, 2)
   specialRequests String?
   status          OrderItemStatus @default(PENDING)
   createdAt       DateTime        @default(now())

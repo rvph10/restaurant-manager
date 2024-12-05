@@ -15,25 +15,22 @@ const roleConfigs = [
     id: 'ADMIN',
     name: 'ADMIN',
     description: 'Administrator with full restaurant access',
-    permissionFilter: () => true // All permissions
+    permissionFilter: () => true, // All permissions
   },
   {
     id: 'MANAGER',
     name: 'MANAGER',
     description: 'Restaurant manager with elevated access',
-    permissionFilter: (p: Permission) => 
-      !p.name.includes('delete') &&
-      !p.name.includes('user:create')
+    permissionFilter: (p: Permission) =>
+      !p.name.includes('delete') && !p.name.includes('user:create'),
   },
   {
     id: 'STAFF',
     name: 'STAFF',
     description: 'Regular staff member',
-    permissionFilter: (p: Permission) => 
-      p.name.includes('read') ||
-      p.name.includes('order:') ||
-      p.name.includes('product:read')
-  }
+    permissionFilter: (p: Permission) =>
+      p.name.includes('read') || p.name.includes('order:') || p.name.includes('product:read'),
+  },
 ];
 
 export async function seedRoles() {
@@ -60,27 +57,27 @@ export async function seedRoles() {
           permissions: {
             // Recreate all permissions
             deleteMany: {},
-            create: rolePermissions.map(permission => ({
-              permissionId: permission.id
-            }))
-          }
+            create: rolePermissions.map((permission) => ({
+              permissionId: permission.id,
+            })),
+          },
         },
         create: {
           name: config.name,
           description: config.description,
           permissions: {
-            create: rolePermissions.map(permission => ({
-              permissionId: permission.id
-            }))
-          }
+            create: rolePermissions.map((permission) => ({
+              permissionId: permission.id,
+            })),
+          },
         },
         include: {
           permissions: {
             include: {
-              permission: true
-            }
-          }
-        }
+              permission: true,
+            },
+          },
+        },
       });
 
       roles.push(role);
