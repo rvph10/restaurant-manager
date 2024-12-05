@@ -615,36 +615,6 @@ model Menu {
 
   @@map("menus")
 }
-
-model Combo {
-  id          String    @id @default(uuid())
-  name        String
-  description String?
-  price       Decimal   @db.Decimal(10, 2)
-  image       String?
-  isAvailable Boolean   @default(true)
-  products    ComboProduct[]
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-
-  @@map("combos")
-}
-
-model ComboProduct {
-  id             String   @id @default(uuid())
-  comboId        String
-  productId      String
-  quantity       Int      @default(1)
-  selectedOption String?
-  includeBox     Boolean  @default(false)
-  combo          Combo    @relation(fields: [comboId], references: [id])
-  product        Product  @relation(fields: [productId], references: [id])
-
-  @@index([comboId])
-  @@index([productId])
-  @@map("combo_products")
-}
-
 model MenuItem {
   id          String  @id @default(uuid())
   menuId      String
@@ -726,7 +696,6 @@ model Product {
   cartItems       CartItem[]
   orderItems      OrderItem[]
   options    ProductOption[]
-  comboProducts    ComboProduct[]
   createdAt       DateTime             @default(now())
   updatedAt       DateTime             @updatedAt
 
