@@ -14,13 +14,12 @@ RUN npm install --legacy-peer-deps
 # Copy the rest of the application
 COPY . .
 
-# Generate Prisma Client
-RUN npx prisma generate --schema=./src/prisma/schema.prisma
-
 # Make wait-for-it.sh executable
 COPY wait-for-it.sh /wait-for-it.sh
 RUN chmod +x /wait-for-it.sh
 
+# Generate Prisma Client
+RUN npx prisma generate --schema=./src/prisma/schema.prisma
 # Set the entrypoint
 ENTRYPOINT ["/wait-for-it.sh"]
 
