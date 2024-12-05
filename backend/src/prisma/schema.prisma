@@ -646,6 +646,27 @@ model Category {
   @@map("categories")
 }
 
+model ProductOption {
+  id          String        @id @default(uuid())
+  productId   String
+  product     Product       @relation(fields: [productId], references: [id])
+  name        String
+  choices     OptionChoice[]
+  required    Boolean       @default(true)
+  
+  @@map("product_options")
+}
+
+model OptionChoice {
+  id              String        @id @default(uuid())
+  productOptionId String
+  productOption   ProductOption @relation(fields: [productOptionId], references: [id])
+  name            String
+  priceModifier   Json
+  
+  @@map("option_choices")
+}
+
 model Product {
   id              String               @id @default(uuid())
   name            String
@@ -664,6 +685,7 @@ model Product {
   menuItems       MenuItem[]
   cartItems       CartItem[]
   orderItems      OrderItem[]
+  options    ProductOption[]
   createdAt       DateTime             @default(now())
   updatedAt       DateTime             @updatedAt
 
@@ -672,6 +694,8 @@ model Product {
   @@map("products")
 }
 
+
+
 model ProductIngredient {
   id           String     @id @default(uuid())
   productId    String
@@ -679,7 +703,7 @@ model ProductIngredient {
   ingredientId String
   ingredient   Ingredient @relation(fields: [ingredientId], references: [id])
   quantity     Decimal    @db.Decimal(10, 3)
-  unit         String
+  unit         MeasurementUnit
   isOptional   Boolean    @default(false)
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
@@ -1700,6 +1724,20 @@ enum IngredientCategory {
   INGREDIENT_SAUCE
   SWEETS
   HERBS
+  PACKAGING
+  CLEANING
+  DISPOSABLES
+  EQUIPMENT
+  PAPER_GOODS
+  TOILETRIES
+  OTHER_SUPPLIES
+  UNIFORMS
+  MARKETING_MATERIALS
+  OFFICE_SUPPLIES
+  TECHNOLOGY
+  FURNITURE
+  DECOR
+  OTHER_EQUIPMENT
 }
 
 enum MenuType {

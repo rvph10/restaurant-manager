@@ -621,7 +621,41 @@ const ingredients: IngredientData[] = [
         cost: 3.0,
         isExtra: true,
         extraPrice: 5.0
-    }
+    },
+    // Packaging
+    {
+        name: 'Burger Takeout Box',
+        description: 'Disposable takeout box',
+        stock: 300,
+        unit: MeasurementUnit.PIECE,
+        category: IngredientCategory.PACKAGING,
+        reorderPoint: 100,
+        reorderAmount: 400,
+        cost: 30,
+        isExtra: false
+    },
+    {
+        name: 'Fries Takeout Box',
+        description: 'Disposable takeout box',
+        stock: 300,
+        unit: MeasurementUnit.PIECE,
+        category: IngredientCategory.PACKAGING,
+        reorderPoint: 100,
+        reorderAmount: 400,
+        cost: 30,
+        isExtra: false
+    },
+    {
+        name: 'Nugget Takeout Box',
+        description: 'Disposable takeout box',
+        stock: 300,
+        unit: MeasurementUnit.PIECE,
+        category: IngredientCategory.PACKAGING,
+        reorderPoint: 100,
+        reorderAmount: 400,
+        cost: 30,
+        isExtra: false
+    },
 ];
 
 export async function seedIngredients() {

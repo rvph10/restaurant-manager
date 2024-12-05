@@ -42,15 +42,15 @@ export async function seedCategories() {
                         description: 'Lets get ready to rumble with our delicious burgers',
                         subcategories: [
                             {
-                                name: 'Beef',
+                                name: 'Beef Burgers',
                                 description: 'All beef burgers'
                             },
                             {
-                                name: 'Chicken',
+                                name: 'Chicken Burgers',
                                 description: 'All chicken burgers'
                             },
                             {
-                                name: 'Veggie',
+                                name: 'Veggie Burgers',
                                 description: 'All vegetarian burgers'
                             }
                         ]
