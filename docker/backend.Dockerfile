@@ -18,7 +18,7 @@ COPY . .
 COPY wait-for-it.sh /wait-for-it.sh
 RUN chmod +x /wait-for-it.sh
 
-# Generate Prisma Client
+RUN npx prisma migrate dev --schema=./src/prisma/schema.prisma
 RUN npx prisma generate --schema=./src/prisma/schema.prisma
 # Set the entrypoint
 ENTRYPOINT ["/wait-for-it.sh"]

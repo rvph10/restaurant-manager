@@ -28,6 +28,12 @@ export const PERMISSIONS = {
   PERMISSION_READ: 'permission:read',
   PERMISSION_UPDATE: 'permission:update',
   PERMISSION_DELETE: 'permission:delete',
+
+  // Menu Management
+  MENU_CREATE: 'menu:create',
+  MENU_READ: 'menu:read',
+  MENU_UPDATE: 'menu:update',
+  MENU_DELETE: 'menu:delete',
 } as const;
 
 export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
