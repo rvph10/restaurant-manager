@@ -700,7 +700,6 @@ model Category {
   parentId        String?
   parent          Category?        @relation("CategoryHierarchy", fields: [parentId], references: [id])
   children        Category[]       @relation("CategoryHierarchy")
-  productionSteps ProductionStep[] @relation("CategoryToPrepare")
   products        Product[]
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
@@ -837,6 +836,9 @@ model Order {
   tableId     String?
   table       Table?      @relation(fields: [tableId], references: [id])
   notes       String?
+  workflowSteps WorkflowStep[]  // Relation to workflow steps
+  queueItems    QueueItem[]     // Relation to queue items
+  
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
 
@@ -1252,191 +1254,59 @@ model PromotionUsage {
   @@map("promotion_usage")
 }
 
-model KitchenStation {
-  id          String  @id @default(uuid())
-  name        String // e.g., "Hot Kitchen", "Cold Kitchen", "Grill"
-  description String?
-  isActive    Boolean @default(true)
-
-  // Station Configuration
-  maxCapacity   Int // Maximum concurrent orders
-  currentLoad   Int                      @default(0)
-  assignedStaff KitchenStaffAssignment[]
-
-  // Station Capabilities
-  itemTypes String[] // Types of items this station can prepare
-  equipment String[] // Required equipment at this station
-
-  // Queue Management
-  orderQueues     KitchenQueue[]
-  productionSteps StationStep[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("kitchen_stations")
+// Kitchen Management
+model Station {
+  id            String          @id @default(uuid())
+  name          String          // e.g., "Plancha", "Fryer", "Burger Assembly", "Order Assembly"
+  type          String          // Type of station
+  displayLimit  Int             // How many orders can be displayed at once
+  currentLoad   Int             @default(0)
+  maxCapacity   Int
+  isActive      Boolean         @default(true)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  queueItems    QueueItem[]
 }
 
-model KitchenStaffAssignment {
-  id         String         @id @default(uuid())
-  stationId  String
-  station    KitchenStation @relation(fields: [stationId], references: [id])
-  employeeId String
-
-  // Assignment Details
-  startTime DateTime
-  endTime   DateTime?
-  isLeader  Boolean   @default(false)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([stationId])
-  @@map("kitchen_staff_assignments")
+model WorkflowStep {
+  id            String     @id @default(uuid())
+  orderId       String
+  order         Order      @relation(fields: [orderId], references: [id])
+  stations      String[]   // Array of station IDs that need to work on this step
+  stepOrder     Int        // Order in which this step should be processed
+  isParallel    Boolean    // Whether stations in this step can work in parallel
+  status        StepStatus @default(PENDING)
+  startedAt     DateTime?
+  completedAt   DateTime?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
 }
 
-// Kitchen Queue Management
-model KitchenQueue {
-  id         String             @id @default(uuid())
-  stationId  String
-  station    KitchenStation     @relation(fields: [stationId], references: [id])
-  orderItems KitchenOrderItem[]
-
-  // Queue Status
-  status        QueueStatus @default(ACTIVE)
-  priorityLevel Priority    @default(MEDIUM)
-
-  // Time Tracking
-  estimatedCompletionTime DateTime?
-  actualCompletionTime    DateTime?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([stationId])
-  @@map("kitchen_queues")
+model QueueItem {
+  id            String        @id @default(uuid())
+  orderId       String
+  order         Order         @relation(fields: [orderId], references: [id])
+  stationId     String
+  station       Station       @relation(fields: [stationId], references: [id])
+  priority      OrderPriority @default(MEDIUM)
+  status        ItemStatus    @default(PENDING)
+  startedAt     DateTime?
+  completedAt   DateTime?
+  waitTime      Int          @default(0)  // Time in queue in seconds
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
 }
 
-model KitchenOrderItem {
-  id          String       @id @default(uuid())
-  queueId     String
-  queue       KitchenQueue @relation(fields: [queueId], references: [id])
-  orderItemId String // Reference to original OrderItem
-
-  // Preparation Details
-  status      PreparationStatus @default(QUEUED)
-  startedAt   DateTime?
-  completedAt DateTime?
-  assignedTo  String? // Employee ID
-
-  // Recipe & Instructions
-  recipeVersion       String? // Version of recipe used
-  specialInstructions String?
-  allergenAlert       Boolean @default(false)
-
-  // Quality Control
-  checkedBy     String? // Employee ID who verified
-  qualityIssues String?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([queueId])
-  @@index([status])
-  @@map("kitchen_order_items")
+enum ItemStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
 }
 
-// Production Line Definition
-model ProductionLine {
-  id          String  @id @default(uuid())
-  name        String // e.g., "Burger Line", "Pizza Line"
-  description String?
-  isActive    Boolean @default(true)
-
-  // Production Steps Configuration
-  steps ProductionStep[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("production_lines")
-}
-
-// Production Step (represents a stage in production)
-model ProductionStep {
-  id                 String         @id @default(uuid())
-  productionLineId   String
-  productionLine     ProductionLine @relation(fields: [productionLineId], references: [id])
-  name               String
-  stepOrder          Int
-  isParallel         Boolean        @default(false)
-  requireAllComplete Boolean        @default(true)
-  isOptional         Boolean        @default(false)
-  estimatedTime      Int?
-  alertAfter         Int?
-  toPrepare          Category[]     @relation("CategoryToPrepare")
-  stations           StationStep[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@unique([productionLineId, stepOrder])
-  @@map("production_steps")
-}
-
-// Links Stations to Steps
-model StationStep {
-  id        String         @id @default(uuid())
-  stepId    String
-  step      ProductionStep @relation(fields: [stepId], references: [id])
-  stationId String
-  station   KitchenStation @relation(fields: [stationId], references: [id])
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@unique([stepId, stationId])
-  @@map("station_steps")
-}
-
-// Order Progress Tracking
-model OrderProgress {
-  id            String   @id @default(uuid())
-  orderId       String   @unique
-  currentStepId String?
-  startTime     DateTime @default(now())
-
-  // Progress History
-  stepHistory StepProgress[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("order_progress")
-}
-
-// Individual Step Progress
-model StepProgress {
-  id              String        @id @default(uuid())
-  orderProgressId String
-  orderProgress   OrderProgress @relation(fields: [orderProgressId], references: [id])
-  stepId          String
-  stationId       String
-  status          StepStatus    @default(PENDING)
-  assignedTo      String? // Employee ID
-
-  // Timing
-  startTime      DateTime?
-  completionTime DateTime?
-
-  // Quality Control
-  checkedBy    String?
-  qualityNotes String?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("step_progress")
+enum OrderPriority {
+  LOW
+  MEDIUM
+  HIGH
 }
 
 enum StepStatus {
@@ -1461,29 +1331,6 @@ enum OrderType {
   TAKEAWAY
   DELIVERY
   DRIVE_THRU
-}
-
-enum QueueStatus {
-  ACTIVE
-  PAUSED
-  COMPLETED
-  CANCELLED
-}
-
-enum PreparationStatus {
-  QUEUED
-  IN_PROGRESS
-  WAITING_CHECK
-  COMPLETED
-  CANCELLED
-  ON_HOLD
-}
-
-enum RecipeComplexity {
-  SIMPLE
-  MEDIUM
-  COMPLEX
-  EXPERT
 }
 
 enum CampaignStatus {
