@@ -26,7 +26,6 @@ import {
   TimeOffType,
 } from '@prisma/client';
 import { auditLog, logger } from '../lib/logging/logger';
-import bcrypt from 'bcryptjs';
 
 export class EmployeeService {
   private handleServiceError(error: unknown, context: string): never {
