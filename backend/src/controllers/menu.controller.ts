@@ -3,6 +3,8 @@ import { MenuService } from '../services/menu.service';
 import { MenuType, Weekday } from '@prisma/client';
 import { logger } from '../lib/logging/logger';
 import { AuthenticatedRequest } from '../types/express';
+import { redisManager } from '../lib/redis/redis.manager';
+import { CACHE_DURATIONS, CACHE_KEYS } from '../constants/cache';
 
 export class MenuController {
   private menuService: MenuService;
@@ -48,6 +50,16 @@ export class MenuController {
 
   public getMenus = async (req: Request, res: Response) => {
     try {
+      const cacheKey = `${CACHE_KEYS.MENUS}:${JSON.stringify(req.query)}`;
+      const cachedData = await redisManager.get(cacheKey);
+      if (cachedData) {
+        res.json({
+          status: 'success',
+          data: JSON.parse(cachedData),
+        });
+        return;
+      }
+  
       const filters = {
         isActive: req.query.isActive === 'true' ? true : undefined,
         type: req.query.type as MenuType | undefined,
@@ -58,6 +70,7 @@ export class MenuController {
       };
   
       const result = await this.menuService.getMenus(filters);
+      await redisManager.set(cacheKey, result, CACHE_DURATIONS.MENUS);
       
       res.json({
         status: 'success',
@@ -122,6 +135,9 @@ export class MenuController {
         ...req.body,
         user: req.user.id,
       });
+
+      await redisManager.delete(`menus:*`);
+    await redisManager.delete(`menu:${req.params.id}`);
   
       res.json({
         status: 'success',

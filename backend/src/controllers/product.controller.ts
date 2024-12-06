@@ -9,6 +9,8 @@ import {
   SupplierFilterOptions,
 } from '../interfaces/product.interface';
 import { IngredientCategory } from '@prisma/client';
+import { redisManager } from '../lib/redis/redis.manager';
+import { CACHE_DURATIONS, CACHE_KEYS } from '../constants/cache';
 
 interface AuthenticatedRequest extends ExpressRequest {
   user?: {
@@ -101,6 +103,14 @@ export class ProductController {
     };
   }
 
+  private async invalidateProductCache() {
+    await redisManager.delete(`${CACHE_KEYS.PRODUCTS}:*`);
+  }
+  
+  private async invalidateCategoryCache() {
+    await redisManager.delete(`${CACHE_KEYS.CATEGORIES}:*`);
+  }
+
   private handleError(error: any, res: Response) {
     logger.error('ProductController Error:', {
       message: error.message,
@@ -141,8 +151,15 @@ export class ProductController {
     try {
       const pagination = this.buildPaginationOptions(req.query);
       const filters = this.buildProductFilters(req.query);
-
+  
+      const cacheKey = `${CACHE_KEYS.PRODUCTS}:${JSON.stringify({pagination, filters})}`;
+      const cachedData = await redisManager.get(cacheKey);
+      if (cachedData) {
+        return this.sendPaginatedResponse(res, cachedData);
+      }
+  
       const result = await this.productService.getProducts(pagination, filters);
+      await redisManager.set(cacheKey, result, CACHE_DURATIONS.PRODUCTS);
       this.sendPaginatedResponse(res, result);
     } catch (error) {
       this.handleError(error, res);
@@ -173,6 +190,9 @@ export class ProductController {
         ...req.body,
         user: req.user.id,
       });
+
+      await this.invalidateProductCache();
+      
       res.status(201).json(product);
     } catch (error) {
       this.handleError(error, res);
@@ -205,8 +225,8 @@ export class ProductController {
           message: 'Authentication required',
         });
       }
-
       await this.productService.deleteProduct(req.params.id, req.user.id);
+      await this.invalidateProductCache();
       res.status(204).send();
     } catch (error) {
       this.handleError(error, res);
@@ -218,8 +238,15 @@ export class ProductController {
     try {
       const pagination = this.buildPaginationOptions(req.query);
       const filters = this.buildCategoryFilters(req.query);
-
+  
+      const cacheKey = `${CACHE_KEYS.CATEGORIES}:${JSON.stringify({pagination, filters})}`;
+      const cachedData = await redisManager.get(cacheKey);
+      if (cachedData) {
+        return this.sendPaginatedResponse(res, cachedData);
+      }
+  
       const result = await this.productService.getCategories(pagination, filters);
+      await redisManager.set(cacheKey, result, CACHE_DURATIONS.CATEGORIES);
       this.sendPaginatedResponse(res, result);
     } catch (error) {
       this.handleError(error, res);
@@ -253,6 +280,7 @@ export class ProductController {
         },
         req.body.newParentCategory || false
       );
+      await this.invalidateCategoryCache();
       res.status(201).json(category);
     } catch (error) {
       this.handleError(error, res);
@@ -288,6 +316,7 @@ export class ProductController {
       }
 
       await this.productService.deleteCategory(req.params.id, req.user.id);
+      await this.invalidateCategoryCache();
       return res.status(204).send();
     } catch (error) {
       this.handleError(error, res);
@@ -299,7 +328,7 @@ export class ProductController {
     try {
       const pagination = this.buildPaginationOptions(req.query);
       const filters = this.buildIngredientFilters(req.query);
-
+  
       const result = await this.productService.getIngredients(pagination, filters);
       this.sendPaginatedResponse(res, result);
     } catch (error) {
