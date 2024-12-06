@@ -344,10 +344,10 @@ export class MenuService {
       const page = filters?.page || 1;
       const limit = filters?.limit || 10;
       const skip = (page - 1) * limit;
-  
+
       // Initialize empty where clause
       const whereClause: Prisma.MenuWhereInput = {};
-  
+
       // Only add filters if explicitly provided
       if (filters?.isActive !== undefined) {
         whereClause.isActive = filters.isActive;
@@ -356,22 +356,22 @@ export class MenuService {
       if (filters?.isDayOfWeek && Object.values(Weekday).includes(filters.isDayOfWeek)) {
         whereClause.daysOfWeek = { has: filters.isDayOfWeek };
       }
-  
+
       if (filters?.isAvailable !== undefined) {
         whereClause.isAvailable = filters.isAvailable;
       }
-  
+
       if (filters?.type) {
         whereClause.type = filters.type;
       }
-  
+
       // Add logging to debug
       logger.info('Query parameters:', {
         whereClause,
         skip,
-        limit
+        limit,
       });
-  
+
       const [menus, total] = await prisma.$transaction([
         prisma.menu.findMany({
           where: whereClause,
@@ -402,7 +402,7 @@ export class MenuService {
         }),
         prisma.menu.count({ where: whereClause }),
       ]);
-  
+
       return {
         data: menus,
         total,

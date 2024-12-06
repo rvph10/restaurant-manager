@@ -59,26 +59,26 @@ export class MenuController {
         });
         return;
       }
-  
+
       const filters = {
         isActive: req.query.isActive === 'true' ? true : undefined,
         type: req.query.type as MenuType | undefined,
         isAvailable: req.query.isAvailable === 'true' ? true : undefined,
         isDayOfWeek: req.query.isDayOfWeek as Weekday | undefined,
         page: req.query.page ? parseInt(req.query.page as string) : 1,
-        limit: req.query.limit ? parseInt(req.query.limit as string) : 10
+        limit: req.query.limit ? parseInt(req.query.limit as string) : 10,
       };
-  
+
       const result = await this.menuService.getMenus(filters);
       await redisManager.set(cacheKey, result, CACHE_DURATIONS.MENUS);
-      
+
       res.json({
         status: 'success',
         data: result.data,
         total: result.total,
         pages: result.pages,
         currentPage: filters.page,
-        hasMore: filters.page < result.pages
+        hasMore: filters.page < result.pages,
       });
     } catch (error) {
       this.handleError(error, res);
@@ -106,12 +106,12 @@ export class MenuController {
         });
         return;
       }
-  
+
       const menu = await this.menuService.createMenu({
         ...req.body,
         user: req.user.id,
       });
-  
+
       res.status(201).json({
         status: 'success',
         data: menu,
@@ -120,7 +120,7 @@ export class MenuController {
       this.handleError(error, res);
     }
   };
-  
+
   public updateMenu = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       if (!req.user?.id) {
@@ -130,15 +130,15 @@ export class MenuController {
         });
         return;
       }
-  
+
       const menu = await this.menuService.updateMenu(req.params.id, {
         ...req.body,
         user: req.user.id,
       });
 
       await redisManager.delete(`menus:*`);
-    await redisManager.delete(`menu:${req.params.id}`);
-  
+      await redisManager.delete(`menu:${req.params.id}`);
+
       res.json({
         status: 'success',
         data: menu,
@@ -147,17 +147,18 @@ export class MenuController {
       this.handleError(error, res);
     }
   };
-  
+
   public deleteMenu = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       if (!req.user?.id) {
-        res.status(401).json({  // Added return statement
+        res.status(401).json({
+          // Added return statement
           status: 'error',
           message: 'Authentication required',
         });
         return;
       }
-  
+
       await this.menuService.deleteMenu(req.params.id, req.user.id);
       res.status(204).send();
     } catch (error) {

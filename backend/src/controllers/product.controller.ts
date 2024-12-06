@@ -106,7 +106,7 @@ export class ProductController {
   private async invalidateProductCache() {
     await redisManager.delete(`${CACHE_KEYS.PRODUCTS}:*`);
   }
-  
+
   private async invalidateCategoryCache() {
     await redisManager.delete(`${CACHE_KEYS.CATEGORIES}:*`);
   }
@@ -151,13 +151,13 @@ export class ProductController {
     try {
       const pagination = this.buildPaginationOptions(req.query);
       const filters = this.buildProductFilters(req.query);
-  
-      const cacheKey = `${CACHE_KEYS.PRODUCTS}:${JSON.stringify({pagination, filters})}`;
+
+      const cacheKey = `${CACHE_KEYS.PRODUCTS}:${JSON.stringify({ pagination, filters })}`;
       const cachedData = await redisManager.get(cacheKey);
       if (cachedData) {
         return this.sendPaginatedResponse(res, cachedData);
       }
-  
+
       const result = await this.productService.getProducts(pagination, filters);
       await redisManager.set(cacheKey, result, CACHE_DURATIONS.PRODUCTS);
       this.sendPaginatedResponse(res, result);
@@ -192,7 +192,7 @@ export class ProductController {
       });
 
       await this.invalidateProductCache();
-      
+
       res.status(201).json(product);
     } catch (error) {
       this.handleError(error, res);
@@ -238,13 +238,13 @@ export class ProductController {
     try {
       const pagination = this.buildPaginationOptions(req.query);
       const filters = this.buildCategoryFilters(req.query);
-  
-      const cacheKey = `${CACHE_KEYS.CATEGORIES}:${JSON.stringify({pagination, filters})}`;
+
+      const cacheKey = `${CACHE_KEYS.CATEGORIES}:${JSON.stringify({ pagination, filters })}`;
       const cachedData = await redisManager.get(cacheKey);
       if (cachedData) {
         return this.sendPaginatedResponse(res, cachedData);
       }
-  
+
       const result = await this.productService.getCategories(pagination, filters);
       await redisManager.set(cacheKey, result, CACHE_DURATIONS.CATEGORIES);
       this.sendPaginatedResponse(res, result);
@@ -328,7 +328,7 @@ export class ProductController {
     try {
       const pagination = this.buildPaginationOptions(req.query);
       const filters = this.buildIngredientFilters(req.query);
-  
+
       const result = await this.productService.getIngredients(pagination, filters);
       this.sendPaginatedResponse(res, result);
     } catch (error) {
