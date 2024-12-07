@@ -1,31 +1,28 @@
-import { ItemStatus, OrderPriority, StationType, StepStatus } from '@prisma/client';
+import { StationType } from '@prisma/client';
 
-export interface StationDataInput {
+export interface CreateStationInput {
+  user: string;
   name: string;
   type: StationType;
   displayLimit: number;
-  currentLoad: number;
   maxCapacity: number;
-  isActive: boolean;
-  queueItems: QueueItemsDataInput[];
+  isActive?: boolean;
+  isIndependent?: boolean;
 }
 
-export interface QueueItemsDataInput {
-  orderId: string;
-  stationId: string;
-  priority: OrderPriority;
-  status: ItemStatus;
-  startedAt?: Date;
-  completedAt?: Date;
-  waitTime: number;
+export interface UpdateStationInput {
+  user: string;
+  id: string;
+  name?: string;
+  type?: StationType;
+  displayLimit?: number;
+  maxCapacity?: number;
+  isActive?: boolean;
+  isIndependent?: boolean;
 }
 
-export interface WorkflowStepDataInput {
-  orderId: string;
-  stations: string[];
-  stepOrder: number;
-  isParallel: boolean;
-  status: StepStatus;
-  startedAt?: Date;
-  completedAt?: Date;
+export interface StationFilters {
+  isActive?: boolean;
+  type?: StationType;
+  isIndependent?: boolean;
 }

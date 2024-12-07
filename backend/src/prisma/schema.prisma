@@ -1257,6 +1257,7 @@ model PromotionUsage {
 // Kitchen Management
 model Station {
   id            String      @id @default(uuid())
+  icon          String
   name          String // e.g., "Plancha", "Fryer", "Burger Assembly", "Order Assembly"
   type          StationType
   displayLimit  Int // How many orders can be displayed at once
