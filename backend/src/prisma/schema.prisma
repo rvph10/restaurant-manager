@@ -1258,11 +1258,12 @@ model PromotionUsage {
 model Station {
   id            String          @id @default(uuid())
   name          String          // e.g., "Plancha", "Fryer", "Burger Assembly", "Order Assembly"
-  type          String          // Type of station
+  type          StationType
   displayLimit  Int             // How many orders can be displayed at once
   currentLoad   Int             @default(0)
   maxCapacity   Int
   isActive      Boolean         @default(true)
+  isIndependent Boolean         @default(false) // Whether this station can work independently
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
   queueItems    QueueItem[]
@@ -1276,6 +1277,7 @@ model WorkflowStep {
   stepOrder     Int        // Order in which this step should be processed
   isParallel    Boolean    // Whether stations in this step can work in parallel
   status        StepStatus @default(PENDING)
+  isIndependent Boolean    @default(false) // Whether this step can be processed independently
   startedAt     DateTime?
   completedAt   DateTime?
   createdAt     DateTime   @default(now())
@@ -1316,6 +1318,21 @@ enum StepStatus {
   BLOCKED
   SKIPPED
   FAILED
+}
+
+enum StationType {
+  PREP
+  COOK
+  ASSEMBLY
+  DELIVERY
+  CLEANING
+  BAR
+  BAKERY
+  GRILL
+  FRY
+  SALAD
+  DESSERT
+  BEVERAGE
 }
 
 enum StockLogType {
