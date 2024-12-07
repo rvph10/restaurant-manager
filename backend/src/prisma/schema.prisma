@@ -692,17 +692,17 @@ model MenuItem {
 }
 
 model Category {
-  id              String           @id @default(uuid())
-  name            String           @unique
-  description     String?
-  displayOrder    Int              @default(0)
-  isActive        Boolean          @default(true)
-  parentId        String?
-  parent          Category?        @relation("CategoryHierarchy", fields: [parentId], references: [id])
-  children        Category[]       @relation("CategoryHierarchy")
-  products        Product[]
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
+  id           String     @id @default(uuid())
+  name         String     @unique
+  description  String?
+  displayOrder Int        @default(0)
+  isActive     Boolean    @default(true)
+  parentId     String?
+  parent       Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children     Category[] @relation("CategoryHierarchy")
+  products     Product[]
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
 
   @@map("categories")
 }
@@ -822,25 +822,25 @@ model Supplier {
 }
 
 model Order {
-  id          String      @id @default(uuid())
-  orderNumber String      @unique
-  customerId  String
-  customer    Customer    @relation("CustomerOrders", fields: [customerId], references: [id])
-  type        OrderType
-  status      OrderStatus @default(PENDING)
-  items       OrderItem[]
-  totalAmount Decimal     @db.Decimal(10, 2)
-  tax         Decimal     @db.Decimal(10, 2)
-  discount    Decimal     @default(0) @db.Decimal(10, 2)
-  deliveryFee Decimal?    @db.Decimal(10, 2)
-  tableId     String?
-  table       Table?      @relation(fields: [tableId], references: [id])
-  notes       String?
-  workflowSteps WorkflowStep[]  // Relation to workflow steps
-  queueItems    QueueItem[]     // Relation to queue items
-  
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  id            String         @id @default(uuid())
+  orderNumber   String         @unique
+  customerId    String
+  customer      Customer       @relation("CustomerOrders", fields: [customerId], references: [id])
+  type          OrderType
+  status        OrderStatus    @default(PENDING)
+  items         OrderItem[]
+  totalAmount   Decimal        @db.Decimal(10, 2)
+  tax           Decimal        @db.Decimal(10, 2)
+  discount      Decimal        @default(0) @db.Decimal(10, 2)
+  deliveryFee   Decimal?       @db.Decimal(10, 2)
+  tableId       String?
+  table         Table?         @relation(fields: [tableId], references: [id])
+  notes         String?
+  workflowSteps WorkflowStep[] // Relation to workflow steps
+  queueItems    QueueItem[] // Relation to queue items
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([customerId])
   @@index([status])
@@ -1256,16 +1256,16 @@ model PromotionUsage {
 
 // Kitchen Management
 model Station {
-  id            String          @id @default(uuid())
-  name          String          // e.g., "Plancha", "Fryer", "Burger Assembly", "Order Assembly"
+  id            String      @id @default(uuid())
+  name          String // e.g., "Plancha", "Fryer", "Burger Assembly", "Order Assembly"
   type          StationType
-  displayLimit  Int             // How many orders can be displayed at once
-  currentLoad   Int             @default(0)
+  displayLimit  Int // How many orders can be displayed at once
+  currentLoad   Int         @default(0)
   maxCapacity   Int
-  isActive      Boolean         @default(true)
-  isIndependent Boolean         @default(false) // Whether this station can work independently
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
+  isActive      Boolean     @default(true)
+  isIndependent Boolean     @default(false) // Whether this station can work independently
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
   queueItems    QueueItem[]
 }
 
@@ -1273,9 +1273,9 @@ model WorkflowStep {
   id            String     @id @default(uuid())
   orderId       String
   order         Order      @relation(fields: [orderId], references: [id])
-  stations      String[]   // Array of station IDs that need to work on this step
-  stepOrder     Int        // Order in which this step should be processed
-  isParallel    Boolean    // Whether stations in this step can work in parallel
+  stations      String[] // Array of station IDs that need to work on this step
+  stepOrder     Int // Order in which this step should be processed
+  isParallel    Boolean // Whether stations in this step can work in parallel
   status        StepStatus @default(PENDING)
   isIndependent Boolean    @default(false) // Whether this step can be processed independently
   startedAt     DateTime?
@@ -1285,18 +1285,18 @@ model WorkflowStep {
 }
 
 model QueueItem {
-  id            String        @id @default(uuid())
-  orderId       String
-  order         Order         @relation(fields: [orderId], references: [id])
-  stationId     String
-  station       Station       @relation(fields: [stationId], references: [id])
-  priority      OrderPriority @default(MEDIUM)
-  status        ItemStatus    @default(PENDING)
-  startedAt     DateTime?
-  completedAt   DateTime?
-  waitTime      Int          @default(0)  // Time in queue in seconds
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
+  id          String        @id @default(uuid())
+  orderId     String
+  order       Order         @relation(fields: [orderId], references: [id])
+  stationId   String
+  station     Station       @relation(fields: [stationId], references: [id])
+  priority    OrderPriority @default(MEDIUM)
+  status      ItemStatus    @default(PENDING)
+  startedAt   DateTime?
+  completedAt DateTime?
+  waitTime    Int           @default(0) // Time in queue in seconds
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
 }
 
 enum ItemStatus {
