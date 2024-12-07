@@ -207,6 +207,7 @@ export class KitchenService {
       }
       const station = await prisma.station.create({
         data: {
+          icon: data.icon,
           name: data.name,
           type: data.type,
           displayLimit: data.displayLimit,
@@ -249,6 +250,7 @@ export class KitchenService {
           id: data.id,
         },
         data: {
+          icon: data.icon,
           name: data.name,
           type: data.type,
           displayLimit: data.displayLimit,

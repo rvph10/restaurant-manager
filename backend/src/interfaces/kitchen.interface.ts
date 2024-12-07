@@ -1,6 +1,7 @@
 import { StationType } from '@prisma/client';
 
 export interface CreateStationInput {
+  icon: string;
   user: string;
   name: string;
   type: StationType;
@@ -11,6 +12,7 @@ export interface CreateStationInput {
 }
 
 export interface UpdateStationInput {
+  icon: string;
   user: string;
   id: string;
   name?: string;
