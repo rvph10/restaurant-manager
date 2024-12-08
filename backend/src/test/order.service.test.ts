@@ -1,11 +1,11 @@
-import { OrderService } from './services/order.service';
+import { OrderService } from '../services/order.service';
 import { jest } from '@jest/globals';
-import { prisma } from './prisma/client';
-import { redisManager } from './lib/redis/redis.manager';
-import { KitchenService } from './services/kitchen.service';
-import { ProductService } from './services/product.service';
-import { auditLog } from './lib/logging/logger';
-import { OrderDataInput, createWorkflowStepsDataInput } from './interfaces/order.interface';
+import { prisma } from '../prisma/client';
+import { redisManager } from '../lib/redis/redis.manager';
+import { KitchenService } from '../services/kitchen.service';
+import { ProductService } from '../services/product.service';
+import { auditLog } from '../lib/logging/logger';
+import { OrderDataInput, createWorkflowStepsDataInput } from '../interfaces/order.interface';
 
 jest.mock('../prisma/client');
 jest.mock('../lib/redis/redis.manager');
