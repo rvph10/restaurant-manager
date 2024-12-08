@@ -89,7 +89,7 @@ export class OrderService {
     throw new ProductServiceError('An unexpected error occurred');
   }
 
-  private async getOrderProducts(productIds: string[]): Promise<Record<string, any>> {
+  async getOrderProducts(productIds: string[]): Promise<Record<string, any>> {
     try {
       const products: Record<string, any> = {};
       const missedIds: string[] = [];

@@ -14,7 +14,7 @@ async function getProductIdByName(name: string): Promise<string> {
 
 export async function seedMenus() {
   try {
-    logger.info('🍽️ Seeding menus...');
+    logger.info('🍽️  Seeding menus...');
 
     // Create a Burger Combo Menu
     const burgerCombo = await prisma.menu.create({
@@ -177,7 +177,7 @@ export async function seedMenus() {
       });
     }
 
-    logger.info('🍽️ Menus seeded successfully');
+    logger.info('🍽️  Menus seeded successfully');
   } catch (error) {
     logger.error('Error seeding menus:', error);
     throw error;

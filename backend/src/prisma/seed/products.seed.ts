@@ -2,8 +2,6 @@ import {
   PrismaClient,
   IngredientCategory,
   MeasurementUnit,
-  Product,
-  ProductIngredient,
   Ingredient,
 } from '@prisma/client';
 import { logger } from '../../lib/logging/logger';
