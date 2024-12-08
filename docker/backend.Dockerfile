@@ -1,7 +1,7 @@
 FROM node:18.19.0-alpine3.18
 
 # Install PostgreSQL client
-RUN apk add --no-cache postgresql-client gnupg
+RUN apk add --no-cache postgresql-client gnupg openssl
 
 WORKDIR /app
 
@@ -13,6 +13,9 @@ RUN npm install --legacy-peer-deps
 
 # Copy the rest of the application
 COPY . .
+
+# Generate Prisma Client
+RUN npx prisma generate --schema=./src/prisma/schema.prisma
 
 # Make wait-for-it.sh executable
 COPY wait-for-it.sh /wait-for-it.sh
