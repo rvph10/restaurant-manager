@@ -6,6 +6,8 @@ export interface CreateStationInput {
   name: string;
   type: StationType;
   displayLimit: number;
+  stepOrder: number;
+  seenCategory: string[];
   maxCapacity: number;
   isActive?: boolean;
   isIndependent?: boolean;
@@ -17,7 +19,9 @@ export interface UpdateStationInput {
   id: string;
   name?: string;
   type?: StationType;
+  stepOrder: number;
   displayLimit?: number;
+  seenCategory: string[];
   maxCapacity?: number;
   isActive?: boolean;
   isIndependent?: boolean;

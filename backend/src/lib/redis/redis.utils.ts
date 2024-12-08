@@ -43,4 +43,13 @@ export class RedisKeyBuilder {
       }),
     tree: () => REDIS_KEY_PATTERNS.CATEGORY.TREE,
   }
+
+  static station = { 
+    detail: (id: string) => 
+      this.formatKey(REDIS_KEY_PATTERNS.STATION.DETAIL, { id }),
+    list: (params: object) => 
+      this.formatKey(REDIS_KEY_PATTERNS.STATION.LIST, { 
+        queryHash: this.generateQueryHash(params) 
+      })
+  }
 }

@@ -1,11 +1,11 @@
-import { OrderItemStatus, OrderStatus, OrderType } from '@prisma/client';
+import { OrderItemStatus, OrderStatus, OrderType, Prisma } from '@prisma/client';
 
 export interface OrderDataInput {
   orderNumber: string;
   customerId: string;
   type: OrderType;
   status: OrderStatus;
-  items: OrderItemDataInput;
+  items: OrderItemDataInput[];
   totalAmount: number;
   tax: number;
   discount: number;
@@ -18,9 +18,14 @@ export interface OrderItemDataInput {
   orderId: string;
   productId: string;
   quantity: number;
-  unitPrice: number;
-  modifications: JSON;
-  extraPrice: number;
-  specialRequest: string;
+  unitPrice: Prisma.Decimal;
+  modifications: Prisma.JsonValue;
+  extraPrice: Prisma.Decimal;
+  specialRequest: string | null;
   status: OrderItemStatus;
+}
+
+export interface createWorkflowStepsDataInput {
+  orderId: string;
+  items: OrderItemDataInput[];
 }

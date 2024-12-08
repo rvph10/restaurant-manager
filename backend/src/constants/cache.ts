@@ -11,6 +11,7 @@ export const CACHE_DURATIONS = {
   CATEGORIES: 21600,
   INGREDIENTS: 7200,
   MENUS: 7200,
+  STATIONS: 3600,
   DB_STATS: 300,
 } as const;
 
@@ -33,5 +34,9 @@ export const REDIS_KEY_PATTERNS = {
   SUPPLIER: {
     DETAIL: 'supplier:detail:{id}',
     LIST: 'supplier:list:{queryHash}',
+  },
+  STATION: {
+    DETAIL: 'station:detail:{id}',
+    LIST: 'station:list:{queryHash}',
   }
 } as const;

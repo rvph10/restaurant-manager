@@ -1253,15 +1253,17 @@ model PromotionUsage {
   @@index([customerId])
   @@map("promotion_usage")
 }
-
+ 
 // Kitchen Management
 model Station {
   id            String      @id @default(uuid())
   icon          String
   name          String // e.g., "Plancha", "Fryer", "Burger Assembly", "Order Assembly"
   type          StationType
+  stepOrder     Int? // Order in which this step should be processed
   displayLimit  Int // How many orders can be displayed at once
   currentLoad   Int         @default(0)
+  seenCategory  String[]
   maxCapacity   Int
   isActive      Boolean     @default(true)
   isIndependent Boolean     @default(false) // Whether this station can work independently
@@ -1275,7 +1277,6 @@ model WorkflowStep {
   orderId       String
   order         Order      @relation(fields: [orderId], references: [id])
   stations      String[] // Array of station IDs that need to work on this step
-  stepOrder     Int // Order in which this step should be processed
   isParallel    Boolean // Whether stations in this step can work in parallel
   status        StepStatus @default(PENDING)
   isIndependent Boolean    @default(false) // Whether this step can be processed independently

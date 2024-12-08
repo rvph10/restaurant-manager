@@ -7,6 +7,9 @@ import {
 } from '../interfaces/kitchen.interface';
 import { Prisma, Station, StationType } from '@prisma/client';
 import { hasValidLength, isValidUUID } from '../utils/valid';
+import { RedisKeyBuilder } from '../lib/redis/redis.utils';
+import { redisManager } from '../lib/redis/redis.manager';
+import { CACHE_DURATIONS } from '../constants/cache';
 
 class ProductServiceError extends Error {
   constructor(
@@ -199,6 +202,22 @@ export class KitchenService {
     }
   }
 
+  private async invalidateStationCache(): Promise<void> {
+    try {
+      const patterns = [
+        'station:detail:*',
+        'station:list:*',
+        'station:exists:*',
+      ];
+      await Promise.all(
+        patterns.map(patterns => redisManager.deletePattern(patterns))
+      );
+      logger.info('Station cache invalidated');
+    } catch (error) {
+      return this.handleServiceError(error, 'invalidateStationCache');
+    }
+  }
+
   async createStation(data: CreateStationInput): Promise<Station> {
     try {
       this.validateCreateStation(data);
@@ -210,7 +229,9 @@ export class KitchenService {
           icon: data.icon,
           name: data.name,
           type: data.type,
+          stepOrder: data.stepOrder,
           displayLimit: data.displayLimit,
+          seenCategory: data.seenCategory,
           maxCapacity: data.maxCapacity,
           isActive: data.isActive ?? true,
           isIndependent: data.isIndependent ?? false,
@@ -232,7 +253,7 @@ export class KitchenService {
         },
         data.user || 'SYSTEM'
       );
-
+      await this.invalidateStationCache();
       return station;
     } catch (error) {
       return this.handleServiceError(error, 'createStation');
@@ -254,6 +275,8 @@ export class KitchenService {
           name: data.name,
           type: data.type,
           displayLimit: data.displayLimit,
+          stepOrder: data.stepOrder,
+          seenCategory: data.seenCategory,
           maxCapacity: data.maxCapacity,
           isActive: data.isActive,
           isIndependent: data.isIndependent,
@@ -275,7 +298,7 @@ export class KitchenService {
         },
         data.user || 'SYSTEM'
       );
-
+      await this.invalidateStationCache();
       return station;
     } catch (error) {
       return this.handleServiceError(error, 'updateStation');
@@ -284,7 +307,20 @@ export class KitchenService {
 
   async getStations(): Promise<Station[]> {
     try {
-      const stations = await prisma.station.findMany();
+      const cacheKey= RedisKeyBuilder.station.list({});
+      const cached = await redisManager.get(cacheKey);
+      if (cached) {
+        logger.debug(`Cache hit for category list: ${cacheKey}`);
+        return cached;
+      }
+      const stations = await prisma.station.findMany(
+        {
+          orderBy: {
+            stepOrder: 'asc'
+          },
+        }
+      );
+      await redisManager.set(cacheKey, stations, CACHE_DURATIONS.STATIONS);
       return stations;
     } catch (error) {
       return this.handleServiceError(error, 'getStations');

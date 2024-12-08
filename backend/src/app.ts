@@ -12,6 +12,7 @@ import { errorHandler } from './middleware/error.handler';
 import { notFoundHandler } from './middleware/notFound.handler';
 import { requestLogger } from './middleware/request.logger';
 import { logger } from './lib/logging/logger';
+import { redisManager } from './lib/redis/redis.manager';
 
 export const createApp = (): Express => {
   const app = express();
@@ -76,12 +77,17 @@ export const createApp = (): Express => {
   // Health Check
   app.get('/health', async (req, res) => {
     try {
-      await prisma.$queryRaw`SELECT 1`;
-      res.json({
-        status: 'ok',
-        timestamp: new Date().toISOString(),
-        database: 'connected',
-      });
+      const isRedisHealthy = await redisManager.healthCheck();
+  const dbConnection = await prisma.$queryRaw`SELECT 1`;
+  
+  res.json({
+    status: 'ok',
+    services: {
+      redis: isRedisHealthy ? 'healthy' : 'unhealthy',
+      database: dbConnection ? 'healthy' : 'unhealthy'
+    },
+    timestamp: new Date().toISOString()
+  });
     } catch (error) {
       res.status(500).json({
         status: 'error',
