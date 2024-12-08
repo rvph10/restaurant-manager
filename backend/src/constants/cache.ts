@@ -13,3 +13,25 @@ export const CACHE_DURATIONS = {
   MENUS: 7200,
   DB_STATS: 300,
 } as const;
+
+export const REDIS_KEY_PATTERNS = {
+  PRODUCT: {
+    DETAIL: 'product:detail:{id}',
+    LIST: 'product:list:{queryHash}',
+    EXISTS: 'product:exists:{queryHash}',
+  },
+  CATEGORY: {
+    DETAIL: 'category:detail:{id}',
+    LIST: 'category:list:{queryHash}',
+    EXISTS: 'category:exists:{queryHash}',
+    TREE: 'category:tree',
+  },
+  INGREDIENT: {
+    DETAIL: 'ingredient:detail:{id}',
+    LIST: 'ingredient:list:{queryHash}',
+  },
+  SUPPLIER: {
+    DETAIL: 'supplier:detail:{id}',
+    LIST: 'supplier:list:{queryHash}',
+  }
+} as const;

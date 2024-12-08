@@ -1,10 +1,6 @@
 import {
-  PrismaClient,
   Prisma,
   Menu,
-  MenuItem,
-  MenuGroup,
-  MenuFixedItem,
   MenuType,
   Weekday,
 } from '@prisma/client';
@@ -15,8 +11,6 @@ import {
   hasValidLength,
   isDateRangeValid,
   isPositiveNumber,
-  isValidEmail,
-  isValidPhoneNumber,
   isValidUUID,
 } from '../utils/valid';
 

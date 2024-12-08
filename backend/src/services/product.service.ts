@@ -30,6 +30,9 @@ import {
   isValidPhoneNumber,
   isValidUUID,
 } from '../utils/valid';
+import { RedisKeyBuilder } from '../lib/redis/redis.utils';
+import { redisManager } from '../lib/redis/redis.manager';
+import { CACHE_DURATIONS } from '../constants/cache';
 
 class ProductServiceError extends Error {
   constructor(
@@ -305,6 +308,35 @@ export class ProductService {
     if (!isValidUUID(id)) throw new ValidationError('Invalid ID format');
   }
 
+  private async invalidateProductCache(): Promise<void> {
+    const patterns = [
+      'product:detail:*',
+      'product:list:*',
+      'product:exists:*'
+    ];
+    
+    await Promise.all(
+      patterns.map(pattern => redisManager.deletePattern(pattern))
+    );
+    
+    logger.debug('Product cache invalidated');
+  }
+
+  private async invalidateCategoryCache(): Promise<void> {
+    const patterns = [
+      'category:detail:*',
+      'category:list:*',
+      'category:exists:*',
+      'category:tree'
+    ];
+    
+    await Promise.all(
+      patterns.map(pattern => redisManager.deletePattern(pattern))
+    );
+    
+    logger.debug('Category cache invalidated');
+  }
+
   async checkProductExists(params: { id?: string; name?: string }): Promise<boolean> {
     try {
       if (!params.id && !params.name) {
@@ -313,6 +345,13 @@ export class ProductService {
       const whereClause: Prisma.ProductWhereInput = {
         OR: [],
       };
+
+      const cacheKey = RedisKeyBuilder.product.exists(params);
+      const cached = await redisManager.get(cacheKey);
+      if (cached) {
+        logger.debug(`Cache hit for product: ${cacheKey}`);
+        return cached;
+      }
 
       if (params.id) {
         whereClause.OR!.push({ id: params.id });
@@ -329,6 +368,8 @@ export class ProductService {
       const product = await prisma.product.findFirst({
         where: whereClause,
       });
+
+      await redisManager.set(cacheKey, !!product, CACHE_DURATIONS.PRODUCTS / 2);
 
       return !!product;
     } catch (error) {
@@ -666,6 +707,13 @@ export class ProductService {
       // Build where clause based on filters
       const where: Prisma.CategoryWhereInput = {};
 
+      const cacheKey= RedisKeyBuilder.product.list({ page, limit, sortBy, sortOrder });
+      const cached = await redisManager.get(cacheKey);
+      if (cached) {
+        logger.debug(`Cache hit for category list: ${cacheKey}`);
+        return cached;
+      }
+
       if (filters.search) {
         where.OR = [
           { name: { contains: filters.search, mode: 'insensitive' } },
@@ -703,13 +751,23 @@ export class ProductService {
 
       const totalPages = Math.ceil(total / limit);
 
-      return {
+      const response = {
         data,
         total,
         page,
         totalPages,
         hasMore: page < totalPages,
       };
+      const cacheData = {
+        data : response,
+        metadata: {
+          cachedAt: new Date().toISOString(),
+          expiresAt: new Date(Date.now() + CACHE_DURATIONS.CATEGORIES * 1000).toISOString(),
+        }
+      }
+      await redisManager.set(cacheKey, cacheData, CACHE_DURATIONS.CATEGORIES);
+      logger.debug(`Category list cached: ${cacheKey}`);
+      return response;
     } catch (error) {
       return this.handleServiceError(error, 'getCategories');
     }
@@ -777,7 +835,7 @@ export class ProductService {
           },
           data.user || 'SYSTEM'
         );
-
+        await this.invalidateCategoryCache();
         return category;
       });
     } catch (error) {
@@ -858,7 +916,7 @@ export class ProductService {
           },
           data.user || 'SYSTEM'
         );
-
+        await this.invalidateCategoryCache();
         return category;
       });
     } catch (error) {
@@ -982,7 +1040,7 @@ export class ProductService {
           },
           data.user || 'SYSTEM'
         );
-
+        await this.invalidateProductCache();
         return product;
       });
     } catch (error) {
@@ -1044,6 +1102,8 @@ export class ProductService {
             },
           },
         });
+        
+        await this.invalidateProductCache();
 
         await auditLog(
           'UPDATE_PRODUCT',
@@ -1115,6 +1175,13 @@ export class ProductService {
       // Build where clause based on filters
       const where: Prisma.ProductWhereInput = {};
 
+      const cacheKey = RedisKeyBuilder.product.list({pagination, filters});
+      const cached = await redisManager.get(cacheKey);
+      if (cached) {
+        logger.debug(`Cache hit for products: ${cacheKey}`);
+        return cached;
+      }
+
       if (filters.search) {
         where.OR = [
           { name: { contains: filters.search, mode: 'insensitive' } },
@@ -1154,14 +1221,24 @@ export class ProductService {
       ]);
 
       const totalPages = Math.ceil(total / limit);
-
-      return {
+      const response = {
         data,
         total,
         page,
         totalPages,
         hasMore: page < totalPages,
       };
+      const cachedData = {
+        data: response,
+        metadata: {
+          cachedAt: new Date().toISOString(),
+          expiresAt: new Date(Date.now() + CACHE_DURATIONS.PRODUCTS * 1000).toISOString(),
+        }
+      }
+      await redisManager.set(cacheKey, cachedData, CACHE_DURATIONS.PRODUCTS);
+      logger.debug(`Cached products: ${cacheKey}`);
+      return response;
+
     } catch (error) {
       return this.handleServiceError(error, 'getProducts');
     }
