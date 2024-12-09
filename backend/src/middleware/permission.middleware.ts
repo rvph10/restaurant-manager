@@ -14,7 +14,7 @@ const CACHE_TTL = 300; // 5 minutes
 interface EmployeeWithRoles extends Employee {
   roles: (EmployeeRole & {
     role: Role & {
-      rolePermissions: (RolePermission & {
+       permissions: (RolePermission & {
         permission: {
           id: string;
           name: string;
@@ -36,7 +36,6 @@ function verifyPermissionHash(permission: string, storedHash: string): boolean {
 }
 
 async function getUserPermissions(userId: string): Promise<string[]> {
-  // Check cache first
   const cacheKey = `permissions:${userId}`;
   const cached = await redisManager.get(cacheKey);
 
@@ -44,8 +43,7 @@ async function getUserPermissions(userId: string): Promise<string[]> {
     return cached;
   }
 
-  // If not cached, get from database
-  const userWithRoles = (await prisma.employee.findUnique({
+  const userWithRoles = await prisma.employee.findUnique({
     where: { id: userId },
     include: {
       roles: {
@@ -62,22 +60,28 @@ async function getUserPermissions(userId: string): Promise<string[]> {
         },
       },
     },
-  })) as EmployeeWithRoles | null;
+  });
 
-  if (!userWithRoles) {
+  if (!userWithRoles || !userWithRoles.roles) {
     return [];
   }
 
-  const permissions = userWithRoles.roles.flatMap((employeeRole) =>
-    employeeRole.role.rolePermissions
-      .filter((rp) => verifyPermissionHash(rp.permission.name, rp.permission.hash))
-      .map((rp) => rp.permission.name)
-  );
+  const permissions = userWithRoles.roles.reduce((acc: string[], employeeRole) => {
+    if (employeeRole.role && employeeRole.role.permissions) {
+      const rolePermissions = employeeRole.role.permissions
+        .filter(rp => rp.permission && verifyPermissionHash(rp.permission.name, rp.permission.hash))
+        .map(rp => rp.permission.name);
+      return [...acc, ...rolePermissions];
+    }
+    return acc;
+  }, []);
 
-  // Cache the permissions
-  await redisManager.set(cacheKey, permissions, CACHE_TTL);
+  // Remove duplicates
+  const uniquePermissions = [...new Set(permissions)];
 
-  return permissions;
+  await redisManager.set(cacheKey, uniquePermissions, CACHE_TTL);
+
+  return uniquePermissions;
 }
 
 // I must call this when update user roles, update role permissions, delete role

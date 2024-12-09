@@ -10,6 +10,8 @@ const orderController = new OrderController();
 // Create order route
 router.post(
   '/',
+  authenticate,
+  hasPermission(PERMISSIONS.ORDER_CREATE),
   orderController.createOrder
 );
 
