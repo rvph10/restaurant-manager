@@ -824,8 +824,9 @@ model Supplier {
 model Order {
   id            String         @id @default(uuid())
   orderNumber   String         @unique
-  customerId    String
-  customer      Customer       @relation("CustomerOrders", fields: [customerId], references: [id])
+  customerId    String?
+  orderName     String?
+  customer      Customer?       @relation("CustomerOrders", fields: [customerId], references: [id])
   type          OrderType
   status        OrderStatus    @default(PENDING)
   items         OrderItem[]
@@ -836,7 +837,7 @@ model Order {
   tableId       String?
   table         Table?         @relation(fields: [tableId], references: [id])
   notes         String?
-  workflowSteps WorkflowStep[] // Relation to workflow steps
+  workflows     Json?          @db.Json
   queueItems    QueueItem[] // Relation to queue items
 
   createdAt DateTime @default(now())
@@ -1272,22 +1273,6 @@ model Station {
   queueItems    QueueItem[]
 
   @@map("stations")
-}
-
-model WorkflowStep {
-  id            String     @id @default(uuid())
-  orderId       String
-  order         Order      @relation(fields: [orderId], references: [id])
-  stations      String[] // Array of station IDs that need to work on this step
-  isParallel    Boolean // Whether stations in this step can work in parallel
-  status        StepStatus @default(PENDING)
-  isIndependent Boolean    @default(false) // Whether this step can be processed independently
-  startedAt     DateTime?
-  completedAt   DateTime?
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
-
-  @@map("workflow_steps")
 }
 
 model QueueItem {

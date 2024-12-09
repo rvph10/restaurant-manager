@@ -1,7 +1,8 @@
 import { OrderItemStatus, OrderStatus, OrderType, Prisma, StationType } from '@prisma/client';
 
 export interface OrderDataInput {
-  customerId: string;
+  customerId?: string;
+  orderName?: string;
   type: OrderType;
   status: OrderStatus;
   items: OrderItemDataInput[];
