@@ -1,4 +1,4 @@
-import { OrderItemStatus, OrderStatus, OrderType, Prisma } from '@prisma/client';
+import { OrderItemStatus, OrderStatus, OrderType, Prisma, StationType } from '@prisma/client';
 
 export interface OrderDataInput {
   orderNumber: string;
@@ -15,44 +15,56 @@ export interface OrderDataInput {
 }
 
 export interface OrderItemDataInput {
-  orderId: string;
   productId: string;
   quantity: number;
-  type: string;
   unitPrice: Prisma.Decimal;
-  modifications: OrderModificationDataInput;
+  modifications:{
+    added?: {
+      id: string;
+      name: string;
+      quantity: number;
+      price: Prisma.Decimal;
+    }[];
+    removed?: {
+      id: string;
+      name: string;
+      price: Prisma.Decimal;
+    }[];
+  }
   extraPrice: Prisma.Decimal;
   specialRequest: string | null;
   status: OrderItemStatus;
 }
 
-export interface OrderModificationDataInput {
-  orderNumber: string;
-  modifications: ModificationDataInput;
-}
-
-export interface ModificationDataInput {
-  added: AddedItemDataInput[];
-  removed: RemovedItemDataInput[];
-}
-
-export interface AddedItemDataInput {
-  id : string;
-  name: string;
-  quantity: number;
-  price: Prisma.Decimal;
-}
-
-export interface RemovedItemDataInput {
+export interface StationDataInput {
   id: string;
-  name: string;
-  price: Prisma.Decimal;
+    type: StationType;
+    createdAt: Date;
+    updatedAt: Date;
+    name: string;
+    icon: string;
+    stepOrder: number | null;
+    displayLimit: number;
+    currentLoad: number;
+    seenCategory: string[];
+    maxCapacity: number;
+    isActive: boolean;
+    isIndependent: boolean
 }
-
 export interface WorkflowStepDataInput {
+  stationName: string;
   name: string;
   quantity: number;
   id: string;
-  added: AddedItemDataInput[];
-  removed: RemovedItemDataInput[];
+  added?: {
+    id: string;
+    name: string;
+    quantity: number;
+    price: Prisma.Decimal;
+  }[];
+  removed?: {
+    id: string;
+    name: string;
+    price: Prisma.Decimal;
+  }[];
 }

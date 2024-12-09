@@ -701,7 +701,6 @@ model Category {
   parent       Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
   children     Category[] @relation("CategoryHierarchy")
   products     Product[]
-  orderItems   OrderItem[]
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 
@@ -856,8 +855,6 @@ model OrderItem {
   product         Product         @relation(fields: [productId], references: [id])
   quantity        Int
   unitPrice       Decimal         @db.Decimal(10, 2)
-  typeId          String 
-  type            Category   @relation(fields: [typeId], references: [id])  
   modifications   Json?
   extraPrice      Decimal         @default(0) @db.Decimal(10, 2)
   specialRequests String?
@@ -1273,6 +1270,8 @@ model Station {
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
   queueItems    QueueItem[]
+
+  @@map("stations")
 }
 
 model WorkflowStep {
@@ -1287,6 +1286,8 @@ model WorkflowStep {
   completedAt   DateTime?
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
+
+  @@map("workflow_steps")
 }
 
 model QueueItem {
@@ -1302,6 +1303,8 @@ model QueueItem {
   waitTime    Int           @default(0) // Time in queue in seconds
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
+
+  @@map("queue_items")
 }
 
 enum ItemStatus {

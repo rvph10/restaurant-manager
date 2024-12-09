@@ -307,22 +307,26 @@ export class KitchenService {
 
   async getStations(): Promise<Station[]> {
     try {
-      const cacheKey= RedisKeyBuilder.station.list({});
+      const cacheKey = RedisKeyBuilder.station.list({});
       const cached = await redisManager.get(cacheKey);
-      if (cached) {
-        logger.debug(`Cache hit for category list: ${cacheKey}`);
+      
+      if (cached && Array.isArray(cached) && cached.length > 0) {
+        logger.debug(`Cache hit for stations list with ${cached.length} stations`);
         return cached;
       }
-      const stations = await prisma.station.findMany(
-        {
-          orderBy: {
-            stepOrder: 'asc'
-          },
-        }
-      );
-      await redisManager.set(cacheKey, stations, CACHE_DURATIONS.STATIONS);
+  
+      const stations = await prisma.station.findMany({
+        orderBy: { stepOrder: 'asc' },
+      });
+      
+      if (stations.length > 0) {
+        await redisManager.set(cacheKey, stations, CACHE_DURATIONS.STATIONS);
+        logger.debug(`Cached ${stations.length} stations`);
+      }
+      
       return stations;
     } catch (error) {
+      logger.error('Error in getStations:', error);
       return this.handleServiceError(error, 'getStations');
     }
   }

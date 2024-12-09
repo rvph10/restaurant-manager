@@ -1,10 +1,11 @@
 import { Order, OrderType, PrismaClient } from '@prisma/client';
 import { redisManager } from '../lib/redis/redis.manager';
-import { WorkflowStepDataInput } from '../interfaces/order.interface';
+import { OrderItemDataInput, StationDataInput, WorkflowStepDataInput } from '../interfaces/order.interface';
 import { OrderDataInput } from '../interfaces/order.interface';
 import { KitchenService } from './kitchen.service';
 import { ProductService } from './product.service';
 import { isValidUUID } from '../utils/valid';
+import { logger } from '../lib/logging/logger';
 
 const prisma = new PrismaClient();
 
@@ -125,31 +126,107 @@ export class OrderService {
     }
   }
 
-  private async createWorkflowSteps(data: OrderDataInput): Promise<WorkflowStepDataInput[]> {
-    const steps: WorkflowStepDataInput[] = [];
-    const stations = await this.kitchenService.getStations();
-    console.log("neuille station: ", stations);
-    for (const item of data.items) {
-      console.log("neuille sale: ", steps);
-      for (const station of stations) {
-        if (station.seenCategory.includes(item.type)) {
-          const product = await this.productService.getProduct(item.productId);
-
-          if (product && product.name) {
-            const step: WorkflowStepDataInput = {
-              name: product.name,
-              quantity: item.quantity,
-              id: item.productId,
-              added: item.modifications.modifications.added,
-              removed: item.modifications.modifications.removed,
-            };
-            steps.push(step);
+  private async getAllStationCategoryPossible(categoryIds: string[]): Promise<string[]> {
+    const allCategories: Set<string> = new Set();
+  
+    const fetchCategories = async (ids: string[]) => {
+      for (const id of ids) {
+        // Skip if we've already processed this category
+        if (allCategories.has(id)) continue;
+        
+        // Add current category
+        allCategories.add(id);
+  
+        const category = await prisma.category.findUnique({
+          where: { id },
+          include: { 
+            children: true,
+            parent: true 
+          },
+        });
+  
+        if (category) {
+          // Add parent if exists
+          if (category.parentId) {
+            allCategories.add(category.parentId);
+          }
+  
+          // Process children recursively
+          if (category.children.length > 0) {
+            const childIds = category.children.map(child => child.id);
+            await fetchCategories(childIds);
           }
         }
       }
-    }
-    return steps;
+    };
+  
+    await fetchCategories(categoryIds);
+    return Array.from(allCategories);
   }
+
+  private async checkOrderItemData(station: StationDataInput, item: OrderItemDataInput): Promise<boolean> {
+    try {
+      // Get the product and its category
+      const product = await prisma.product.findUnique({
+        where: { id: item.productId },
+        include: {
+          category: true
+        }
+      });
+  
+      if (!product) {
+        throw new ValidationError(`Product not found: ${item.productId}`);
+      }
+  
+      // Get all possible categories for the station
+      const stationCategories = await this.getAllStationCategoryPossible(station.seenCategory);
+      
+      // Check if the product's category is in the station's category list
+      return stationCategories.includes(product.categoryId);
+  
+    } catch (error) {
+      logger.error('Error checking order item data:', {
+        stationId: station.id,
+        itemId: item.productId,
+        error
+      });
+      throw error;
+    }
+  }
+
+  private async createWorkflowSteps(data: OrderDataInput): Promise<WorkflowStepDataInput[]> {
+  const steps: WorkflowStepDataInput[] = [];
+  const stations = await this.kitchenService.getStations();
+  logger.debug('Stations:', stations.toString());
+  for (const item of data.items) {
+    for (const station of stations) {
+      if (await this.checkOrderItemData(station, item)) {
+        const product = await prisma.product.findUnique({
+          where: { id: item.productId }
+        });
+
+        if (!product) {
+          logger.warn(`Product not found for ID: ${item.productId}`);
+          continue;
+        }
+
+        const step: WorkflowStepDataInput = {
+          stationName: station.name,
+          name: product.name,
+          quantity: item.quantity,
+          id: item.productId,
+          added: item.modifications?.added || [],
+          removed: item.modifications?.removed || []
+        };
+
+        steps.push(step);
+      }
+    }
+  }
+  
+  steps.sort((a, b) => a.stationName.localeCompare(b.stationName));
+  return steps;
+}
 
   async createOrder(data: OrderDataInput): Promise<WorkflowStepDataInput[]>{
     await this.checkOrderTypeData(data);
