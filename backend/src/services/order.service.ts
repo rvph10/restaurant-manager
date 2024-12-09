@@ -354,11 +354,59 @@ export class OrderService {
     }
   }
 
+  private async calculateTotalAmount(items: OrderItemDataInput[]): Promise<number> {
+    try {
+      let total = 0;
+  
+      for (const item of items) {
+        // Get product base price
+        const product = await prisma.product.findUnique({
+          where: { id: item.productId }
+        });
+  
+        if (!product) {
+          throw new ResourceNotFoundError(`Product ${item.productId} not found`);
+        }
+  
+        // Calculate base cost (product price * quantity)
+        let itemTotal = Number(product.price) * item.quantity;
+  
+        // Add extra price if any
+        if (item.extraPrice) {
+          itemTotal += Number(item.extraPrice);
+        }
+  
+        // Add costs for added ingredients/modifications
+        if (item.modifications?.added) {
+          for (const addition of item.modifications.added) {
+            const ingredient = await prisma.ingredient.findUnique({
+              where: { id: addition.id }
+            });
+  
+            if (ingredient && ingredient.isExtra && ingredient.extraPrice) {
+              itemTotal += Number(ingredient.extraPrice) * addition.quantity;
+            }
+          }
+        }
+  
+        total += itemTotal;
+      }
+  
+      // Round to 2 decimal places
+      return Number(total.toFixed(2));
+    } catch (error) {
+      logger.error('Error calculating total amount:', error);
+      throw error;
+    }
+  }
+
   async createOrder(data: OrderDataInput): Promise<Order> {
     await this.checkOrderTypeData(data);
     const orderNumber = await this.createOrderNumber();
     const workflowSteps = await this.createWorkflowSteps(data);
-  
+    if (!data.totalAmount) {
+      data.totalAmount = await this.calculateTotalAmount(data.items);
+    }
     // Wrap everything in a transaction
     const order = await prisma.$transaction(async (tx) => {
       // Create the order
@@ -366,7 +414,7 @@ export class OrderService {
         data: {
           orderNumber: orderNumber.toString(),
           customerId: data.customerId || undefined,
-          orderName: data.orderName || undefined,
+          orderName: data.orderName,
           type: data.type,
           status: OrderStatus.PENDING,
           items: {
@@ -381,7 +429,7 @@ export class OrderService {
             })),
           },
           totalAmount: data.totalAmount,
-          tax: data.tax,
+          tax: data.tax || 0,
           discount: data.discount,
           deliveryFee: data.deliveryFee,
           tableId: data.tableId,
@@ -389,8 +437,7 @@ export class OrderService {
           workflows: workflowSteps as any,
         }
       });
-  
-      // Update ingredient stock
+
       await this.updateIngredientStock(data.items);
   
       return createdOrder;
