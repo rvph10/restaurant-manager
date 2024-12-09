@@ -63,26 +63,27 @@ export async function seedStations() {
         type: StationType.BAR,
         stepOrder: 1, // Can start independently
         displayLimit: 8,
-        seenCategory: ['Beverages',],
+        seenCategory: ['Beverages'],
         maxCapacity: 12,
         isActive: true,
         isIndependent: true, // Independent station
         currentLoad: 0,
-      }
+      },
     ];
-    
 
     for (const station of stations) {
-      const categoryIds = await Promise.all(station.seenCategory.map(async (category) => {
-      const foundCategory = await prisma.category.findUnique({ where: { name: category } });
-      return foundCategory ? foundCategory.id : null;
-      }));
+      const categoryIds = await Promise.all(
+        station.seenCategory.map(async (category) => {
+          const foundCategory = await prisma.category.findUnique({ where: { name: category } });
+          return foundCategory ? foundCategory.id : null;
+        })
+      );
 
       await prisma.station.create({
-      data: {
-        ...station,
-        seenCategory: categoryIds.filter(id => id !== null), // Filter out null values
-      },
+        data: {
+          ...station,
+          seenCategory: categoryIds.filter((id) => id !== null), // Filter out null values
+        },
       });
     }
 

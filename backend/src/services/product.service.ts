@@ -309,31 +309,18 @@ export class ProductService {
   }
 
   private async invalidateProductCache(): Promise<void> {
-    const patterns = [
-      'product:detail:*',
-      'product:list:*',
-      'product:exists:*'
-    ];
-    
-    await Promise.all(
-      patterns.map(pattern => redisManager.deletePattern(pattern))
-    );
-    
+    const patterns = ['product:detail:*', 'product:list:*', 'product:exists:*'];
+
+    await Promise.all(patterns.map((pattern) => redisManager.deletePattern(pattern)));
+
     logger.debug('Product cache invalidated');
   }
 
   private async invalidateCategoryCache(): Promise<void> {
-    const patterns = [
-      'category:detail:*',
-      'category:list:*',
-      'category:exists:*',
-      'category:tree'
-    ];
-    
-    await Promise.all(
-      patterns.map(pattern => redisManager.deletePattern(pattern))
-    );
-    
+    const patterns = ['category:detail:*', 'category:list:*', 'category:exists:*', 'category:tree'];
+
+    await Promise.all(patterns.map((pattern) => redisManager.deletePattern(pattern)));
+
     logger.debug('Category cache invalidated');
   }
 
@@ -707,7 +694,7 @@ export class ProductService {
       // Build where clause based on filters
       const where: Prisma.CategoryWhereInput = {};
 
-      const cacheKey= RedisKeyBuilder.product.list({ page, limit, sortBy, sortOrder });
+      const cacheKey = RedisKeyBuilder.product.list({ page, limit, sortBy, sortOrder });
       const cached = await redisManager.get(cacheKey);
       if (cached) {
         logger.debug(`Cache hit for category list: ${cacheKey}`);
@@ -759,12 +746,12 @@ export class ProductService {
         hasMore: page < totalPages,
       };
       const cacheData = {
-        data : response,
+        data: response,
         metadata: {
           cachedAt: new Date().toISOString(),
           expiresAt: new Date(Date.now() + CACHE_DURATIONS.CATEGORIES * 1000).toISOString(),
-        }
-      }
+        },
+      };
       await redisManager.set(cacheKey, cacheData, CACHE_DURATIONS.CATEGORIES);
       logger.debug(`Category list cached: ${cacheKey}`);
       return response;
@@ -1102,7 +1089,7 @@ export class ProductService {
             },
           },
         });
-        
+
         await this.invalidateProductCache();
 
         await auditLog(
@@ -1175,7 +1162,7 @@ export class ProductService {
       // Build where clause based on filters
       const where: Prisma.ProductWhereInput = {};
 
-      const cacheKey = RedisKeyBuilder.product.list({pagination, filters});
+      const cacheKey = RedisKeyBuilder.product.list({ pagination, filters });
       const cached = await redisManager.get(cacheKey);
       if (cached) {
         logger.debug(`Cache hit for products: ${cacheKey}`);
@@ -1233,12 +1220,11 @@ export class ProductService {
         metadata: {
           cachedAt: new Date().toISOString(),
           expiresAt: new Date(Date.now() + CACHE_DURATIONS.PRODUCTS * 1000).toISOString(),
-        }
-      }
+        },
+      };
       await redisManager.set(cacheKey, cachedData, CACHE_DURATIONS.PRODUCTS);
       logger.debug(`Cached products: ${cacheKey}`);
       return response;
-
     } catch (error) {
       return this.handleServiceError(error, 'getProducts');
     }
@@ -1248,7 +1234,6 @@ export class ProductService {
     try {
       this.validateGetOperation(id);
 
-      
       const product = await prisma.product.findUnique({
         where: { id },
       });

@@ -38,5 +38,5 @@ export const REDIS_KEY_PATTERNS = {
   STATION: {
     DETAIL: 'station:detail:{id}',
     LIST: 'station:list:{queryHash}',
-  }
+  },
 } as const;

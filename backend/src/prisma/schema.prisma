@@ -1253,7 +1253,7 @@ model PromotionUsage {
   @@index([customerId])
   @@map("promotion_usage")
 }
- 
+
 // Kitchen Management
 model Station {
   id            String      @id @default(uuid())

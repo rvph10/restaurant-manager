@@ -14,7 +14,7 @@ const employeeConfigs = [
     employmentType: 'FULL_TIME' as EmploymentType,
     department: ['MANAGEMENT'] as Department[],
     roleName: 'ADMIN',
-    hourlyRate: 25.00,
+    hourlyRate: 25.0,
   },
   {
     email: 'manager@restaurant.com',
@@ -25,7 +25,7 @@ const employeeConfigs = [
     employmentType: 'FULL_TIME' as EmploymentType,
     department: ['MANAGEMENT'] as Department[],
     roleName: 'MANAGER',
-    hourlyRate: 20.00,
+    hourlyRate: 20.0,
   },
   {
     email: 'chef@restaurant.com',
@@ -36,7 +36,7 @@ const employeeConfigs = [
     employmentType: 'FULL_TIME' as EmploymentType,
     department: ['KITCHEN'] as Department[],
     roleName: 'STAFF',
-    hourlyRate: 18.00,
+    hourlyRate: 18.0,
   },
   {
     email: 'server@restaurant.com',
@@ -47,8 +47,8 @@ const employeeConfigs = [
     employmentType: 'PART_TIME' as EmploymentType,
     department: ['SERVICE'] as Department[],
     roleName: 'STAFF',
-    hourlyRate: 15.00,
-  }
+    hourlyRate: 15.0,
+  },
 ];
 
 export async function seedEmployees() {
@@ -58,7 +58,7 @@ export async function seedEmployees() {
     for (const config of employeeConfigs) {
       // Find the role
       const role = await prisma.role.findFirst({
-        where: { name: config.roleName }
+        where: { name: config.roleName },
       });
 
       if (!role) {
@@ -81,10 +81,12 @@ export async function seedEmployees() {
           hourlyRate: config.hourlyRate,
           roles: {
             deleteMany: {},
-            create: [{
-              roleId: role.id
-            }]
-          }
+            create: [
+              {
+                roleId: role.id,
+              },
+            ],
+          },
         },
         create: {
           email: config.email,
@@ -98,11 +100,13 @@ export async function seedEmployees() {
           department: config.department,
           hourlyRate: config.hourlyRate,
           roles: {
-            create: [{
-              roleId: role.id
-            }]
-          }
-        }
+            create: [
+              {
+                roleId: role.id,
+              },
+            ],
+          },
+        },
       });
     }
 

@@ -204,14 +204,8 @@ export class KitchenService {
 
   private async invalidateStationCache(): Promise<void> {
     try {
-      const patterns = [
-        'station:detail:*',
-        'station:list:*',
-        'station:exists:*',
-      ];
-      await Promise.all(
-        patterns.map(patterns => redisManager.deletePattern(patterns))
-      );
+      const patterns = ['station:detail:*', 'station:list:*', 'station:exists:*'];
+      await Promise.all(patterns.map((patterns) => redisManager.deletePattern(patterns)));
       logger.info('Station cache invalidated');
     } catch (error) {
       return this.handleServiceError(error, 'invalidateStationCache');
@@ -309,21 +303,21 @@ export class KitchenService {
     try {
       const cacheKey = RedisKeyBuilder.station.list({});
       const cached = await redisManager.get(cacheKey);
-      
+
       if (cached && Array.isArray(cached) && cached.length > 0) {
         logger.debug(`Cache hit for stations list with ${cached.length} stations`);
         return cached;
       }
-  
+
       const stations = await prisma.station.findMany({
         orderBy: { stepOrder: 'asc' },
       });
-      
+
       if (stations.length > 0) {
         await redisManager.set(cacheKey, stations, CACHE_DURATIONS.STATIONS);
         logger.debug(`Cached ${stations.length} stations`);
       }
-      
+
       return stations;
     } catch (error) {
       logger.error('Error in getStations:', error);

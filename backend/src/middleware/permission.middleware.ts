@@ -14,7 +14,7 @@ const CACHE_TTL = 300; // 5 minutes
 interface EmployeeWithRoles extends Employee {
   roles: (EmployeeRole & {
     role: Role & {
-       permissions: (RolePermission & {
+      permissions: (RolePermission & {
         permission: {
           id: string;
           name: string;
@@ -69,8 +69,10 @@ async function getUserPermissions(userId: string): Promise<string[]> {
   const permissions = userWithRoles.roles.reduce((acc: string[], employeeRole) => {
     if (employeeRole.role && employeeRole.role.permissions) {
       const rolePermissions = employeeRole.role.permissions
-        .filter(rp => rp.permission && verifyPermissionHash(rp.permission.name, rp.permission.hash))
-        .map(rp => rp.permission.name);
+        .filter(
+          (rp) => rp.permission && verifyPermissionHash(rp.permission.name, rp.permission.hash)
+        )
+        .map((rp) => rp.permission.name);
       return [...acc, ...rolePermissions];
     }
     return acc;

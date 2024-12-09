@@ -78,16 +78,16 @@ export const createApp = (): Express => {
   app.get('/health', async (req, res) => {
     try {
       const isRedisHealthy = await redisManager.healthCheck();
-  const dbConnection = await prisma.$queryRaw`SELECT 1`;
-  
-  res.json({
-    status: 'ok',
-    services: {
-      redis: isRedisHealthy ? 'healthy' : 'unhealthy',
-      database: dbConnection ? 'healthy' : 'unhealthy'
-    },
-    timestamp: new Date().toISOString()
-  });
+      const dbConnection = await prisma.$queryRaw`SELECT 1`;
+
+      res.json({
+        status: 'ok',
+        services: {
+          redis: isRedisHealthy ? 'healthy' : 'unhealthy',
+          database: dbConnection ? 'healthy' : 'unhealthy',
+        },
+        timestamp: new Date().toISOString(),
+      });
     } catch (error) {
       res.status(500).json({
         status: 'error',

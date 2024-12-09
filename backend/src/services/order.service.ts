@@ -1,6 +1,12 @@
 import { Order, OrderType, PrismaClient } from '@prisma/client';
 import { redisManager } from '../lib/redis/redis.manager';
-import { OrderItemDataInput, removeDataInput, StationDataInput, StepItemDataInput, WorkflowStepDataInput } from '../interfaces/order.interface';
+import {
+  OrderItemDataInput,
+  removeDataInput,
+  StationDataInput,
+  StepItemDataInput,
+  WorkflowStepDataInput,
+} from '../interfaces/order.interface';
 import { OrderDataInput } from '../interfaces/order.interface';
 import { KitchenService } from './kitchen.service';
 import { ProductService } from './product.service';
@@ -77,23 +83,23 @@ export class OrderService {
     if (!data.customerId || !isValidUUID(data.customerId)) {
       throw new ValidationError('Valid customer ID is required');
     }
-  
+
     if (!data.items || data.items.length === 0) {
       throw new ValidationError('Order must contain at least one item');
     }
-  
+
     if (data.totalAmount <= 0) {
       throw new ValidationError('Total amount must be greater than zero');
     }
-  
+
     if (data.tax < 0) {
       throw new ValidationError('Tax cannot be negative');
     }
-  
+
     if (data.discount < 0) {
       throw new ValidationError('Discount cannot be negative');
     }
-  
+
     if (data.tableId && !isValidUUID(data.tableId)) {
       throw new ValidationError('Invalid table ID format');
     }
@@ -109,7 +115,9 @@ export class OrderService {
         if (!data.deliveryFee) {
           throw new MissingParameterError('Delivery fee is required for delivery orders');
         }
-        if (await prisma.customerAddress.findUnique({where: {id: data.customerId}}) !== null) {
+        if (
+          (await prisma.customerAddress.findUnique({ where: { id: data.customerId } })) !== null
+        ) {
           throw new ResourceNotFoundError('Customer address not found');
         }
         break;
@@ -128,156 +136,169 @@ export class OrderService {
 
   private async getAllStationCategoryPossible(categoryIds: string[]): Promise<string[]> {
     const allCategories: Set<string> = new Set();
-  
+
     const fetchCategories = async (ids: string[]) => {
       for (const id of ids) {
         // Skip if we've already processed this category
         if (allCategories.has(id)) continue;
-        
+
         // Add current category
         allCategories.add(id);
-  
+
         const category = await prisma.category.findUnique({
           where: { id },
-          include: { 
+          include: {
             children: true,
-            parent: true 
+            parent: true,
           },
         });
-  
+
         if (category) {
           // Add parent if exists
           if (category.parentId) {
             allCategories.add(category.parentId);
           }
-  
+
           // Process children recursively
           if (category.children.length > 0) {
-            const childIds = category.children.map(child => child.id);
+            const childIds = category.children.map((child) => child.id);
             await fetchCategories(childIds);
           }
         }
       }
     };
-  
+
     await fetchCategories(categoryIds);
     return Array.from(allCategories);
   }
 
-  private async checkOrderItemData(station: StationDataInput, item: OrderItemDataInput): Promise<boolean> {
+  private async checkOrderItemData(
+    station: StationDataInput,
+    item: OrderItemDataInput
+  ): Promise<boolean> {
     try {
       // Get the product and its category
       const product = await prisma.product.findUnique({
         where: { id: item.productId },
         include: {
-          category: true
-        }
+          category: true,
+        },
       });
-  
+
       if (!product) {
         throw new ValidationError(`Product not found: ${item.productId}`);
       }
-  
+
       // Get all possible categories for the station
       const stationCategories = await this.getAllStationCategoryPossible(station.seenCategory);
-      
+
       // Check if the product's category is in the station's category list
       return stationCategories.includes(product.categoryId);
-  
     } catch (error) {
       logger.error('Error checking order item data:', {
         stationId: station.id,
         itemId: item.productId,
-        error
+        error,
       });
       throw error;
     }
   }
 
-  private async checkIngredientInProduct(product: OrderItemDataInput, removeIngredient: removeDataInput[]): Promise<removeDataInput[]> {
+  private async checkIngredientInProduct(
+    product: OrderItemDataInput,
+    removeIngredient: removeDataInput[]
+  ): Promise<removeDataInput[]> {
     const ele = await prisma.product.findUnique({
       where: { id: product.productId },
-      include: { ingredients: true }
+      include: { ingredients: true },
     });
-  
+
     if (!ele || !ele.ingredients) {
-      throw new ResourceNotFoundError(`Product or ingredients not found for ID: ${product.productId}`);
+      throw new ResourceNotFoundError(
+        `Product or ingredients not found for ID: ${product.productId}`
+      );
     }
-  
+
     const validRemovedIngredients: removeDataInput[] = [];
-  
+
     for (const ingredient of removeIngredient) {
-      const isIngredientInProduct = ele.ingredients.some(productIngredient => productIngredient.id === ingredient.id);
+      const isIngredientInProduct = ele.ingredients.some(
+        (productIngredient) => productIngredient.id === ingredient.id
+      );
       if (isIngredientInProduct) {
         validRemovedIngredients.push(ingredient);
       } else {
         logger.warn(`Ingredient not found in product: ${ingredient.id}`);
       }
     }
-  
+
     return validRemovedIngredients;
   }
 
   private cleanModifications(modifications: any) {
     if (!modifications) return { added: [], removed: [] };
-    
+
     return {
-      added: modifications.added?.map((item: any) => ({
-        id: item.id,
-        name: item.name,
-        quantity: item.quantity
-      })) || [],
-      removed: modifications.removed || []
+      added:
+        modifications.added?.map((item: any) => ({
+          id: item.id,
+          name: item.name,
+          quantity: item.quantity,
+        })) || [],
+      removed: modifications.removed || [],
     };
   }
 
   private async createWorkflowSteps(data: OrderDataInput): Promise<WorkflowStepDataInput[]> {
-  const steps: WorkflowStepDataInput[] = [];
-  const stations = await this.kitchenService.getStations();
+    const steps: WorkflowStepDataInput[] = [];
+    const stations = await this.kitchenService.getStations();
 
-  for (const station of stations) {
-    const stepItem: StepItemDataInput[] = []; 
-    for (const item of data.items) {
-      if (await this.checkOrderItemData(station, item)) {
-        const product = await prisma.product.findUnique({
-          where: { id: item.productId }
-        });
+    for (const station of stations) {
+      const stepItem: StepItemDataInput[] = [];
+      for (const item of data.items) {
+        if (await this.checkOrderItemData(station, item)) {
+          const product = await prisma.product.findUnique({
+            where: { id: item.productId },
+          });
 
-        if (!product) {
-          logger.warn(`Product not found for ID: ${item.productId}`);
-          continue;
-        }
-        const cleanModifications = this.cleanModifications(item.modifications);
-        if (cleanModifications?.removed && cleanModifications.removed.length > 0) {
-          cleanModifications.removed = await this.checkIngredientInProduct(item, cleanModifications.removed);
-        }
+          if (!product) {
+            logger.warn(`Product not found for ID: ${item.productId}`);
+            continue;
+          }
+          const cleanModifications = this.cleanModifications(item.modifications);
+          if (cleanModifications?.removed && cleanModifications.removed.length > 0) {
+            cleanModifications.removed = await this.checkIngredientInProduct(
+              item,
+              cleanModifications.removed
+            );
+          }
 
-        const step: StepItemDataInput = {
-          name: product.name,
-          quantity: item.quantity,
-          id: item.productId,
-          added: cleanModifications.added || [],
-          removed: cleanModifications.removed || []
+          const step: StepItemDataInput = {
+            name: product.name,
+            quantity: item.quantity,
+            id: item.productId,
+            added: cleanModifications.added || [],
+            removed: cleanModifications.removed || [],
+          };
+          stepItem.push(step);
         }
-        stepItem.push(step);
+      }
+      if (stepItem.length > 0) {
+        const step: WorkflowStepDataInput = {
+          stationName: station.name,
+          item: stepItem,
+        };
+        steps.push(step);
       }
     }
-    if (stepItem.length > 0) {
-      const step: WorkflowStepDataInput = {
-        stationName: station.name,
-        item: stepItem
-      };
-      steps.push(step);
-    }
+    return steps;
   }
-  return steps;
-}
 
-  async createOrder(data: OrderDataInput): Promise<WorkflowStepDataInput[]>{
+  async createOrder(data: OrderDataInput): Promise<WorkflowStepDataInput[]> {
     await this.checkOrderTypeData(data);
     const orderNumber = await this.createOrderNumber();
     const workflowSteps = await this.createWorkflowSteps(data);
-    console.log("neuille sucre: ", workflowSteps);
+    console.log('neuille sucre: ', workflowSteps);
     // const order = await prisma.order.create({
     //   data: {
     //     orderNumber: orderNumber.toString(),

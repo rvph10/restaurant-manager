@@ -1,9 +1,4 @@
-import {
-  PrismaClient,
-  IngredientCategory,
-  MeasurementUnit,
-  Ingredient,
-} from '@prisma/client';
+import { PrismaClient, IngredientCategory, MeasurementUnit, Ingredient } from '@prisma/client';
 import { logger } from '../../lib/logging/logger';
 import { Decimal } from '@prisma/client/runtime/library';
 

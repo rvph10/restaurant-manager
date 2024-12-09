@@ -53,20 +53,20 @@ export class RedisManager {
 
   private async withRetry<T>(operation: () => Promise<T>, maxRetries = 3): Promise<T> {
     let lastError: Error | null = null;
-    
+
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         return await operation();
       } catch (error) {
         lastError = error as Error;
         logger.warn(`Redis operation failed (attempt ${attempt}/${maxRetries}):`, error);
-        
+
         if (attempt < maxRetries) {
-          await new Promise(resolve => setTimeout(resolve, attempt * 1000));
+          await new Promise((resolve) => setTimeout(resolve, attempt * 1000));
         }
       }
     }
-    
+
     throw lastError;
   }
 
@@ -79,12 +79,12 @@ export class RedisManager {
         } else {
           await this.client.set(key, serialized);
         }
-        
+
         // Add cache metadata
         await this.client.hset(`${key}:meta`, {
           createdAt: Date.now(),
-          expiresAt: expiry ? Date.now() + (expiry * 1000) : null,
-          type: typeof value
+          expiresAt: expiry ? Date.now() + expiry * 1000 : null,
+          type: typeof value,
         });
       } catch (error) {
         logger.error('Redis set error:', error);
@@ -114,11 +114,11 @@ export class RedisManager {
       if (key && value) acc[key] = value;
       return acc;
     }, {});
-  
+
     return {
       usedMemory: parseInt(stats['used_memory']) || 0,
       peakMemory: parseInt(stats['used_memory_peak']) || 0,
-      totalKeys: parseInt((await this.client.dbsize()).toString()) || 0
+      totalKeys: parseInt((await this.client.dbsize()).toString()) || 0,
     };
   }
 
@@ -135,14 +135,11 @@ export class RedisManager {
             batchSize
           );
           cursor = newCursor;
-  
+
           if (keys.length > 0) {
             // Delete keys and their metadata
-            const metaKeys = keys.map(key => `${key}:meta`);
-            await Promise.all([
-              this.client.del(...keys),
-              this.client.del(...metaKeys)
-            ]);
+            const metaKeys = keys.map((key) => `${key}:meta`);
+            await Promise.all([this.client.del(...keys), this.client.del(...metaKeys)]);
             logger.debug(`Deleted ${keys.length} keys matching pattern: ${pattern}`);
           }
         } while (cursor !== '0');
@@ -158,17 +155,17 @@ export class RedisManager {
       try {
         const [value, meta] = await Promise.all([
           this.client.get(key),
-          this.client.hgetall(`${key}:meta`)
+          this.client.hgetall(`${key}:meta`),
         ]);
-  
+
         if (!value) return null;
-  
+
         // Validate expiration
         if (meta.expiresAt && parseInt(meta.expiresAt) < Date.now()) {
           await this.delete(key);
           return null;
         }
-  
+
         return JSON.parse(value);
       } catch (error) {
         logger.error('Redis get error:', error);

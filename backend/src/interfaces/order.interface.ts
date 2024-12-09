@@ -17,7 +17,7 @@ export interface OrderItemDataInput {
   productId: string;
   quantity: number;
   unitPrice: Prisma.Decimal;
-  modifications:{
+  modifications: {
     added?: {
       id: string;
       name: string;
@@ -27,7 +27,7 @@ export interface OrderItemDataInput {
       id: string;
       name: string;
     }[];
-  }
+  };
   extraPrice: Prisma.Decimal;
   specialRequest: string | null;
   status: OrderItemStatus;
@@ -35,18 +35,18 @@ export interface OrderItemDataInput {
 
 export interface StationDataInput {
   id: string;
-    type: StationType;
-    createdAt: Date;
-    updatedAt: Date;
-    name: string;
-    icon: string;
-    stepOrder: number | null;
-    displayLimit: number;
-    currentLoad: number;
-    seenCategory: string[];
-    maxCapacity: number;
-    isActive: boolean;
-    isIndependent: boolean
+  type: StationType;
+  createdAt: Date;
+  updatedAt: Date;
+  name: string;
+  icon: string;
+  stepOrder: number | null;
+  displayLimit: number;
+  currentLoad: number;
+  seenCategory: string[];
+  maxCapacity: number;
+  isActive: boolean;
+  isIndependent: boolean;
 }
 export interface WorkflowStepDataInput {
   stationName: string;
@@ -67,5 +67,5 @@ export interface StepItemDataInput {
 
 export interface removeDataInput {
   id: string;
-    name: string;
+  name: string;
 }

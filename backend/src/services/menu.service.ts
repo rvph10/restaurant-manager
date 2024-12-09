@@ -1,18 +1,8 @@
-import {
-  Prisma,
-  Menu,
-  MenuType,
-  Weekday,
-} from '@prisma/client';
+import { Prisma, Menu, MenuType, Weekday } from '@prisma/client';
 import { prisma } from '../prisma/client';
 import { logger, auditLog } from '../lib/logging/logger';
 import { MenuDataInput } from '../interfaces/menu.interface';
-import {
-  hasValidLength,
-  isDateRangeValid,
-  isPositiveNumber,
-  isValidUUID,
-} from '../utils/valid';
+import { hasValidLength, isDateRangeValid, isPositiveNumber, isValidUUID } from '../utils/valid';
 
 class ProductServiceError extends Error {
   constructor(
