@@ -1,7 +1,6 @@
 import { OrderItemStatus, OrderStatus, OrderType, Prisma, StationType } from '@prisma/client';
 
 export interface OrderDataInput {
-  orderNumber: string;
   customerId: string;
   type: OrderType;
   status: OrderStatus;
@@ -23,12 +22,10 @@ export interface OrderItemDataInput {
       id: string;
       name: string;
       quantity: number;
-      price: Prisma.Decimal;
     }[];
     removed?: {
       id: string;
       name: string;
-      price: Prisma.Decimal;
     }[];
   }
   extraPrice: Prisma.Decimal;
@@ -53,6 +50,10 @@ export interface StationDataInput {
 }
 export interface WorkflowStepDataInput {
   stationName: string;
+  item: StepItemDataInput[];
+}
+
+export interface StepItemDataInput {
   name: string;
   quantity: number;
   id: string;
@@ -60,11 +61,11 @@ export interface WorkflowStepDataInput {
     id: string;
     name: string;
     quantity: number;
-    price: Prisma.Decimal;
   }[];
-  removed?: {
-    id: string;
+  removed?: removeDataInput[];
+}
+
+export interface removeDataInput {
+  id: string;
     name: string;
-    price: Prisma.Decimal;
-  }[];
 }
