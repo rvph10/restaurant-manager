@@ -1247,6 +1247,8 @@ export class ProductService {
   async getProduct(id: string): Promise<Product | null> {
     try {
       this.validateGetOperation(id);
+
+      
       const product = await prisma.product.findUnique({
         where: { id },
       });

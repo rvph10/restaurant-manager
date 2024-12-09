@@ -701,6 +701,7 @@ model Category {
   parent       Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
   children     Category[] @relation("CategoryHierarchy")
   products     Product[]
+  orderItems   OrderItem[]
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 
@@ -855,6 +856,8 @@ model OrderItem {
   product         Product         @relation(fields: [productId], references: [id])
   quantity        Int
   unitPrice       Decimal         @db.Decimal(10, 2)
+  typeId          String 
+  type            Category   @relation(fields: [typeId], references: [id])  
   modifications   Json?
   extraPrice      Decimal         @default(0) @db.Decimal(10, 2)
   specialRequests String?

@@ -10,7 +10,7 @@ export interface OrderDataInput {
   tax: number;
   discount: number;
   deliveryFee?: number;
-  tableId: string;
+  tableId?: string;
   notes?: string;
 }
 
@@ -18,14 +18,41 @@ export interface OrderItemDataInput {
   orderId: string;
   productId: string;
   quantity: number;
+  type: string;
   unitPrice: Prisma.Decimal;
-  modifications: Prisma.JsonValue;
+  modifications: OrderModificationDataInput;
   extraPrice: Prisma.Decimal;
   specialRequest: string | null;
   status: OrderItemStatus;
 }
 
-export interface createWorkflowStepsDataInput {
-  orderId: string;
-  items: OrderItemDataInput[];
+export interface OrderModificationDataInput {
+  orderNumber: string;
+  modifications: ModificationDataInput;
+}
+
+export interface ModificationDataInput {
+  added: AddedItemDataInput[];
+  removed: RemovedItemDataInput[];
+}
+
+export interface AddedItemDataInput {
+  id : string;
+  name: string;
+  quantity: number;
+  price: Prisma.Decimal;
+}
+
+export interface RemovedItemDataInput {
+  id: string;
+  name: string;
+  price: Prisma.Decimal;
+}
+
+export interface WorkflowStepDataInput {
+  name: string;
+  quantity: number;
+  id: string;
+  added: AddedItemDataInput[];
+  removed: RemovedItemDataInput[];
 }
