@@ -1,4 +1,12 @@
-import { Category, OrderItemStatus, OrderStatus, OrderType, Prisma, Product, StationType } from '@prisma/client';
+import {
+  Category,
+  OrderItemStatus,
+  OrderStatus,
+  OrderType,
+  Prisma,
+  Product,
+  StationType,
+} from '@prisma/client';
 
 export interface OrderDataInput {
   customerId?: string;

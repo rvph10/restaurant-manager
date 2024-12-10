@@ -289,31 +289,31 @@ export class OrderService {
     try {
       const cacheKey = `product:${productId}`;
       const cached = await redisManager.get(cacheKey);
-      
+
       if (cached) {
         logger.debug('Product cache hit', { productId });
-        return cached as CachedProduct;  // Type assertion since Redis returns any
+        return cached as CachedProduct; // Type assertion since Redis returns any
       }
-  
+
       const product = await prisma.product.findUnique({
         where: { id: productId },
         include: {
           category: true,
           ingredients: {
             include: {
-              ingredient: true
-            }
-          }
-        }
+              ingredient: true,
+            },
+          },
+        },
       });
-  
+
       if (product) {
         const cachedProduct = product as unknown as CachedProduct;
         await redisManager.set(cacheKey, cachedProduct, 3600);
         logger.debug('Product cached', { productId });
         return cachedProduct;
       }
-  
+
       return null;
     } catch (error) {
       logger.error('Error getting product with cache:', error);
@@ -327,34 +327,36 @@ export class OrderService {
         for (const item of items) {
           const product = await this.getProductWithCache(item.productId);
           if (!product || !product.ingredients) {
-            throw new ResourceNotFoundError(`Product ${item.productId} or its ingredients not found`);
+            throw new ResourceNotFoundError(
+              `Product ${item.productId} or its ingredients not found`
+            );
           }
-  
+
           // Process each ingredient
           for (const productIngredient of product.ingredients) {
             // Calculate quantity needed with proper decimal handling
             const requiredQuantity = new Prisma.Decimal(productIngredient.quantity)
               .mul(new Prisma.Decimal(item.quantity))
               .toNumber();
-  
+
             logger.debug(`Processing ingredient stock update`, {
               ingredientName: productIngredient.ingredient.name,
               ingredientId: productIngredient.ingredientId,
               currentStock: productIngredient.ingredient.stock,
               requiredQuantity,
-              productId: item.productId
+              productId: item.productId,
             });
-  
+
             // Update ingredient stock
             const updatedIngredient = await tx.ingredient.update({
               where: { id: productIngredient.ingredientId },
               data: {
                 stock: {
-                  decrement: requiredQuantity
-                }
-              }
+                  decrement: requiredQuantity,
+                },
+              },
             });
-  
+
             // Create stock movement log
             await tx.ingredientStockLog.create({
               data: {
@@ -362,20 +364,20 @@ export class OrderService {
                 quantity: -requiredQuantity,
                 type: 'USAGE',
                 reason: `Order Usage - Product: ${product.name}`,
-                performedBy: 'SYSTEM'
-              }
+                performedBy: 'SYSTEM',
+              },
             });
-  
+
             // Check if reorder point is reached - using proper decimal comparison
             const currentStock = new Prisma.Decimal(updatedIngredient.stock);
             const reorderPoint = new Prisma.Decimal(updatedIngredient.reorderPoint);
-  
+
             if (currentStock.lessThanOrEqualTo(reorderPoint)) {
               logger.warn(`Low stock alert for ingredient ${updatedIngredient.name}`, {
                 currentStock: currentStock.toString(),
                 reorderPoint: reorderPoint.toString(),
                 ingredientId: updatedIngredient.id,
-                productId: product.id
+                productId: product.id,
               });
             }
           }
@@ -390,39 +392,39 @@ export class OrderService {
   private async calculateTotalAmount(items: OrderItemDataInput[]): Promise<number> {
     try {
       let total = 0;
-  
+
       for (const item of items) {
         // Get product base price
         const product = await this.getProductWithCache(item.productId);
-  
+
         if (!product) {
           throw new ResourceNotFoundError(`Product ${item.productId} not found`);
         }
-  
+
         // Calculate base cost (product price * quantity)
         let itemTotal = Number(product.price) * item.quantity;
-  
+
         // Add extra price if any
         if (item.extraPrice) {
           itemTotal += Number(item.extraPrice);
         }
-  
+
         // Add costs for added ingredients/modifications
         if (item.modifications?.added) {
           for (const addition of item.modifications.added) {
             const ingredient = await prisma.ingredient.findUnique({
-              where: { id: addition.id }
+              where: { id: addition.id },
             });
-  
+
             if (ingredient && ingredient.isExtra && ingredient.extraPrice) {
               itemTotal += Number(ingredient.extraPrice) * addition.quantity;
             }
           }
         }
-  
+
         total += itemTotal;
       }
-  
+
       // Round to 2 decimal places
       return Number(total.toFixed(2));
     } catch (error) {
@@ -466,15 +468,15 @@ export class OrderService {
           tableId: data.tableId,
           notes: data.notes,
           workflows: workflowSteps as any,
-        }
+        },
       });
       await this.updateIngredientStock(data.items);
-      if (data.customerId !== null) {} // Update customer loyalty points + add order to customer history
+      if (data.customerId !== null) {
+      } // Update customer loyalty points + add order to customer history
 
-  
       return createdOrder;
     });
-  
+
     return order;
   }
 }
