@@ -1,6 +1,7 @@
-import { Order, OrderStatus, OrderType, PrismaClient } from '@prisma/client';
+import { Order, OrderStatus, OrderType, Prisma, PrismaClient, Product } from '@prisma/client';
 import { redisManager } from '../lib/redis/redis.manager';
 import {
+  CachedProduct,
   OrderItemDataInput,
   removeDataInput,
   StationDataInput,
@@ -12,7 +13,6 @@ import { KitchenService } from './kitchen.service';
 import { ProductService } from './product.service';
 import { isValidUUID } from '../utils/valid';
 import { logger } from '../lib/logging/logger';
-import { STATUS_CODES } from 'http';
 
 const prisma = new PrismaClient();
 
@@ -179,12 +179,7 @@ export class OrderService {
   ): Promise<boolean> {
     try {
       // Get the product and its category
-      const product = await prisma.product.findUnique({
-        where: { id: item.productId },
-        include: {
-          category: true,
-        },
-      });
+      const product = await this.getProductWithCache(item.productId);
 
       if (!product) {
         throw new ValidationError(`Product not found: ${item.productId}`);
@@ -209,10 +204,7 @@ export class OrderService {
     product: OrderItemDataInput,
     removeIngredient: removeDataInput[]
   ): Promise<removeDataInput[]> {
-    const ele = await prisma.product.findUnique({
-      where: { id: product.productId },
-      include: { ingredients: true },
-    });
+    const ele = await this.getProductWithCache(product.productId);
 
     if (!ele || !ele.ingredients) {
       throw new ResourceNotFoundError(
@@ -224,7 +216,7 @@ export class OrderService {
 
     for (const ingredient of removeIngredient) {
       const isIngredientInProduct = ele.ingredients.some(
-        (productIngredient) => productIngredient.id === ingredient.id
+        (productIngredient) => productIngredient.ingredientId === ingredient.id
       );
       if (isIngredientInProduct) {
         validRemovedIngredients.push(ingredient);
@@ -258,9 +250,7 @@ export class OrderService {
       const stepItem: StepItemDataInput[] = [];
       for (const item of data.items) {
         if (await this.checkOrderItemData(station, item)) {
-          const product = await prisma.product.findUnique({
-            where: { id: item.productId },
-          });
+          const product = await this.getProductWithCache(item.productId);
 
           if (!product) {
             logger.warn(`Product not found for ID: ${item.productId}`);
@@ -295,30 +285,69 @@ export class OrderService {
     return steps;
   }
 
+  private async getProductWithCache(productId: string): Promise<CachedProduct | null> {
+    try {
+      const cacheKey = `product:${productId}`;
+      const cached = await redisManager.get(cacheKey);
+      
+      if (cached) {
+        logger.debug('Product cache hit', { productId });
+        return cached as CachedProduct;  // Type assertion since Redis returns any
+      }
+  
+      const product = await prisma.product.findUnique({
+        where: { id: productId },
+        include: {
+          category: true,
+          ingredients: {
+            include: {
+              ingredient: true
+            }
+          }
+        }
+      });
+  
+      if (product) {
+        const cachedProduct = product as unknown as CachedProduct;
+        await redisManager.set(cacheKey, cachedProduct, 3600);
+        logger.debug('Product cached', { productId });
+        return cachedProduct;
+      }
+  
+      return null;
+    } catch (error) {
+      logger.error('Error getting product with cache:', error);
+      throw error;
+    }
+  }
+
   private async updateIngredientStock(items: OrderItemDataInput[]): Promise<void> {
     try {
       await prisma.$transaction(async (tx) => {
         for (const item of items) {
-          // Get product with its ingredients
-          const product = await tx.product.findUnique({
-            where: { id: item.productId },
-            include: {
-              ingredients: true
-            }
-          });
-  
+          const product = await this.getProductWithCache(item.productId);
           if (!product || !product.ingredients) {
             throw new ResourceNotFoundError(`Product ${item.productId} or its ingredients not found`);
           }
   
           // Process each ingredient
-          for (const ingredient of product.ingredients) {
-            // Calculate quantity needed
-            const requiredQuantity = Number(ingredient.quantity) * item.quantity;
-            
+          for (const productIngredient of product.ingredients) {
+            // Calculate quantity needed with proper decimal handling
+            const requiredQuantity = new Prisma.Decimal(productIngredient.quantity)
+              .mul(new Prisma.Decimal(item.quantity))
+              .toNumber();
+  
+            logger.debug(`Processing ingredient stock update`, {
+              ingredientName: productIngredient.ingredient.name,
+              ingredientId: productIngredient.ingredientId,
+              currentStock: productIngredient.ingredient.stock,
+              requiredQuantity,
+              productId: item.productId
+            });
+  
             // Update ingredient stock
             const updatedIngredient = await tx.ingredient.update({
-              where: { id: ingredient.ingredientId },
+              where: { id: productIngredient.ingredientId },
               data: {
                 stock: {
                   decrement: requiredQuantity
@@ -329,20 +358,24 @@ export class OrderService {
             // Create stock movement log
             await tx.ingredientStockLog.create({
               data: {
-                ingredientId: ingredient.ingredientId,
+                ingredientId: productIngredient.ingredientId,
                 quantity: -requiredQuantity,
                 type: 'USAGE',
-                reason: `Order Usage - Order #${item.productId}`,
+                reason: `Order Usage - Product: ${product.name}`,
                 performedBy: 'SYSTEM'
               }
             });
   
-            // Check if reorder point is reached
-            if (updatedIngredient.stock <= updatedIngredient.reorderPoint) {
+            // Check if reorder point is reached - using proper decimal comparison
+            const currentStock = new Prisma.Decimal(updatedIngredient.stock);
+            const reorderPoint = new Prisma.Decimal(updatedIngredient.reorderPoint);
+  
+            if (currentStock.lessThanOrEqualTo(reorderPoint)) {
               logger.warn(`Low stock alert for ingredient ${updatedIngredient.name}`, {
-                currentStock: updatedIngredient.stock,
-                reorderPoint: updatedIngredient.reorderPoint,
-                ingredientId: updatedIngredient.id
+                currentStock: currentStock.toString(),
+                reorderPoint: reorderPoint.toString(),
+                ingredientId: updatedIngredient.id,
+                productId: product.id
               });
             }
           }
@@ -360,9 +393,7 @@ export class OrderService {
   
       for (const item of items) {
         // Get product base price
-        const product = await prisma.product.findUnique({
-          where: { id: item.productId }
-        });
+        const product = await this.getProductWithCache(item.productId);
   
         if (!product) {
           throw new ResourceNotFoundError(`Product ${item.productId} not found`);
@@ -437,8 +468,9 @@ export class OrderService {
           workflows: workflowSteps as any,
         }
       });
-
       await this.updateIngredientStock(data.items);
+      if (data.customerId !== null) {} // Update customer loyalty points + add order to customer history
+
   
       return createdOrder;
     });

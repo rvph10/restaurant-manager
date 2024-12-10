@@ -1,4 +1,4 @@
-import { OrderItemStatus, OrderStatus, OrderType, Prisma, StationType } from '@prisma/client';
+import { Category, OrderItemStatus, OrderStatus, OrderType, Prisma, Product, StationType } from '@prisma/client';
 
 export interface OrderDataInput {
   customerId?: string;
@@ -69,4 +69,22 @@ export interface StepItemDataInput {
 export interface removeDataInput {
   id: string;
   name: string;
+}
+
+export interface ProductIngredient {
+  ingredientId: string;
+  quantity: number;
+  ingredient: {
+    id: string;
+    name: string;
+    stock: number;
+    reorderPoint: number;
+    isExtra: boolean;
+    extraPrice: number | null;
+  };
+}
+
+export interface CachedProduct extends Product {
+  ingredients: ProductIngredient[];
+  category: Category;
 }
