@@ -242,10 +242,22 @@ export class OrderService {
     };
   }
 
+  private sortStations(stations: StationDataInput[]): StationDataInput[] {
+    const independentStations = stations.filter(station => station.isIndependent);
+    const dependentStations = stations.filter(station => !station.isIndependent);
+
+    const sortedDependentStations = dependentStations.sort((a, b) => {
+      const orderA = a.stepOrder ?? Number.MAX_SAFE_INTEGER;
+      const orderB = b.stepOrder ?? Number.MAX_SAFE_INTEGER;
+      return orderA - orderB;
+    });
+    return [...independentStations, ...sortedDependentStations];
+  }
+
   private async createWorkflowSteps(data: OrderDataInput): Promise<WorkflowStepDataInput[]> {
     const steps: WorkflowStepDataInput[] = [];
-    const stations = await this.kitchenService.getStations();
-
+    const unsortedStations = await this.kitchenService.getStations();
+    const stations = this.sortStations(unsortedStations);
     for (const station of stations) {
       const stepItem: StepItemDataInput[] = [];
       for (const item of data.items) {
@@ -277,6 +289,8 @@ export class OrderService {
       if (stepItem.length > 0) {
         const step: WorkflowStepDataInput = {
           stationName: station.name,
+          stepOrder: station.stepOrder ?? -1,
+          isParallel: station.isParallel || false,
           item: stepItem,
         };
         steps.push(step);

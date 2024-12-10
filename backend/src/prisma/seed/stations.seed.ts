@@ -1,12 +1,11 @@
 import { PrismaClient, StationType } from '@prisma/client';
 import { logger } from '../../lib/logging/logger';
-import { ProductService } from '../../services/product.service';
 
 const prisma = new PrismaClient();
 
 export async function seedStations() {
   try {
-    logger.info('Starting station seeding...');
+    logger.info('🚩 Seeding stations...');
 
     const stations = [
       {
@@ -15,7 +14,7 @@ export async function seedStations() {
         type: StationType.GRILL,
         stepOrder: 1,
         displayLimit: 8,
-        seenCategory: ['Burgers'], // Can see all burger categories
+        seenCategory: ['Burgers'],
         maxCapacity: 12,
         isActive: true,
         isIndependent: false,
@@ -27,22 +26,24 @@ export async function seedStations() {
         type: StationType.FRY,
         stepOrder: 2,
         displayLimit: 6,
-        seenCategory: ['Sides'], // Handles sides
+        seenCategory: ['Sides'],
         maxCapacity: 10,
         isActive: true,
-        isIndependent: false, // Part of parallel step
+        isIndependent: false,
+        isParallel: true,
         currentLoad: 0,
       },
       {
         icon: '🍔',
         name: 'Burger Assembly',
         type: StationType.ASSEMBLY,
-        stepOrder: 2, // Same step order as fryer for parallel processing
+        stepOrder: 2,
         displayLimit: 6,
         seenCategory: ['Burgers'],
         maxCapacity: 8,
         isActive: true,
-        isIndependent: false, // Part of parallel step
+        isIndependent: false,
+        isParallel: true,
         currentLoad: 0,
       },
       {
@@ -61,7 +62,6 @@ export async function seedStations() {
         icon: '🍺',
         name: 'Bar',
         type: StationType.BAR,
-        stepOrder: 1, // Can start independently
         displayLimit: 8,
         seenCategory: ['Beverages'],
         maxCapacity: 12,
@@ -88,7 +88,7 @@ export async function seedStations() {
     }
 
     const count = await prisma.station.count();
-    logger.info(`Station seeding completed successfully. Created ${count} stations.`);
+    logger.info('🚩 Stations seeded successfully');
   } catch (error) {
     logger.error('Error seeding stations:', error);
     throw error;

@@ -1268,6 +1268,7 @@ model Station {
   maxCapacity   Int
   isActive      Boolean     @default(true)
   isIndependent Boolean     @default(false) // Whether this station can work independently
+  isParallel    Boolean     @default(false)
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
   queueItems    QueueItem[]

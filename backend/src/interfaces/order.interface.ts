@@ -55,10 +55,13 @@ export interface StationDataInput {
   seenCategory: string[];
   maxCapacity: number;
   isActive: boolean;
+  isParallel: boolean;
   isIndependent: boolean;
 }
 export interface WorkflowStepDataInput {
   stationName: string;
+  stepOrder: number;
+  isParallel: boolean;
   item: StepItemDataInput[];
 }
 
