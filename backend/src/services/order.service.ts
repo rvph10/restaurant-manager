@@ -12,7 +12,7 @@ import { OrderDataInput } from '../interfaces/order.interface';
 import { KitchenService } from './kitchen.service';
 import { ProductService } from './product.service';
 import { isValidUUID } from '../utils/valid';
-import { logger } from '../lib/logging/logger';
+import { auditLog, logger } from '../lib/logging/logger';
 
 const prisma = new PrismaClient();
 
@@ -448,6 +448,7 @@ export class OrderService {
   }
 
   async createOrder(data: OrderDataInput): Promise<Order> {
+    this.validateOrderData(data);
     await this.checkOrderTypeData(data);
     const orderNumber = await this.createOrderNumber();
     const workflowSteps = await this.createWorkflowSteps(data);
@@ -491,6 +492,16 @@ export class OrderService {
       return createdOrder;
     });
 
+    auditLog('ORDER_CREATED', {
+      orderId: order.id,
+      orderNumber: orderNumber,
+      customerId: order.customerId,
+      totalAmount: order.totalAmount,
+    },
+    data.user || 'SYSTEM',
+    );
+
     return order;
   }
+
 }

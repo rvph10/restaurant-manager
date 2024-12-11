@@ -1,30 +1,32 @@
 #!/bin/sh
+
+# Exit on any error
 set -e
 
-# Maximum number of retries
-max_retries=30
-retry_interval=2
-current_try=1
+echo "🔍 Checking for required services..."
 
-echo "Waiting for PostgreSQL to be ready..."
-
-while [ $current_try -le $max_retries ]
-do
-    if PGPASSWORD=postgres psql -h "postgres" -U "postgres" -c '\q' >/dev/null 2>&1; then
-        echo "PostgreSQL is ready!"
-        break
-    fi
-
-    echo "Attempt $current_try of $max_retries: PostgreSQL is not ready yet..."
-    
-    if [ $current_try -eq $max_retries ]; then
-        echo "Error: PostgreSQL did not become ready in time"
-        exit 1
-    fi
-    
-    current_try=$((current_try + 1))
-    sleep $retry_interval
+# Wait for PostgreSQL
+until pg_isready -h postgres -p 5432 -U postgres; do
+  echo "⏳ PostgreSQL is unavailable - sleeping"
+  sleep 1
 done
+echo "✅ PostgreSQL is ready!"
 
-echo "Starting application..."
+# Wait for Redis
+until nc -z redis 6379; do
+  echo "⏳ Redis is unavailable - sleeping"
+  sleep 1
+done
+echo "✅ Redis is ready!"
+
+echo "🔄 Running database migrations..."
+npx prisma migrate deploy --schema=./src/prisma/schema.prisma
+
+echo "🔄 Generating Prisma client..."
+npx prisma generate --schema=./src/prisma/schema.prisma
+
+echo "🌱 Seeding database..."
+npm run db:seed
+
+echo "🚀 Starting application..."
 exec "$@"

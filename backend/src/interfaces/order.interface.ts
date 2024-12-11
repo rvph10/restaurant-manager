@@ -20,6 +20,7 @@ export interface OrderDataInput {
   deliveryFee?: number;
   tableId?: string;
   notes?: string;
+  user: string;
 }
 
 export interface OrderItemDataInput {

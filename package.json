@@ -24,7 +24,8 @@
     "express-session": "^1.18.1",
     "ioredis": "^5.4.1",
     "prettier": "^3.4.1",
-    "redis": "^4.7.0"
+    "redis": "^4.7.0",
+    "wait-on": "^8.0.1"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
