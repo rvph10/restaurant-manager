@@ -2,6 +2,7 @@ import { Order, OrderStatus, OrderType, Prisma, PrismaClient, Product } from '@p
 import { redisManager } from '../lib/redis/redis.manager';
 import {
   CachedProduct,
+  OrderFilterOptions,
   OrderItemDataInput,
   removeDataInput,
   StationDataInput,
@@ -13,6 +14,7 @@ import { KitchenService } from './kitchen.service';
 import { ProductService } from './product.service';
 import { isValidUUID } from '../utils/valid';
 import { auditLog, logger } from '../lib/logging/logger';
+import { PaginatedResponse, PaginationOptions } from '../interfaces/product.interface';
 
 const prisma = new PrismaClient();
 
@@ -448,7 +450,8 @@ export class OrderService {
   }
 
   async createOrder(data: OrderDataInput): Promise<Order> {
-    this.validateOrderData(data);
+    try {
+      this.validateOrderData(data);
     await this.checkOrderTypeData(data);
     const orderNumber = await this.createOrderNumber();
     const workflowSteps = await this.createWorkflowSteps(data);
@@ -502,6 +505,132 @@ export class OrderService {
     );
 
     return order;
+    } catch (error) {
+      logger.error('Error creating order:', error);
+      return null as any;
+    }
   }
 
+  async getOrder(id: string): Promise<Order | null> {
+    try {
+      const cacheKey = `order:${id}`;
+    const cached = await redisManager.get(cacheKey);
+    if (cached) {
+      logger.debug('Order cache hit', { orderId: id });
+      return cached;
+    }
+
+    const order = await prisma.order.findUnique({
+      where: { id },
+      include: {
+        items: true,
+      },
+    });
+    const cachedData = {
+      data: order,
+      metadata: {
+        cachedAt: new Date().toISOString,
+        expiresAt: new Date(Date.now() + 3600 * 1000).toISOString,
+      },
+    }
+    await redisManager.set(cacheKey, cachedData, 3600);
+    logger.debug('Order cached', { orderId: id });
+    return order;
+    } catch (error) {
+      logger.error('Error getting order:', error);
+      return null;
+    }
+  }
+
+  private validatePaginationAndSorting(
+    pagination: PaginationOptions,
+    allowedSortFields: string[]
+  ): void{
+    try {
+      const { page, limit, sortBy, sortOrder } = pagination;
+
+      if (page !== undefined && (typeof page !== 'number' || page < 1)) {
+        throw new ValidationError('Invalid page number');
+      }
+
+      if (limit !== undefined && (typeof limit !== 'number' || limit < 1)) {
+        throw new ValidationError('Invalid limit');
+      }
+
+      if (sortBy !== undefined && !allowedSortFields.includes(sortBy)) {
+        throw new ValidationError('Invalid sort field');
+      }
+
+      if (sortOrder !== undefined && !['asc', 'desc'].includes(sortOrder)) {
+        throw new ValidationError('Invalid sort order');
+      }
+
+      if (page === undefined && limit !== undefined) {
+        throw new ValidationError('Page number is required when limit is provided');
+      }
+
+      if (page !== undefined && limit === undefined) {
+        throw new ValidationError('Limit is required when page number is provided');
+      }
+
+      if (sortBy === undefined && sortOrder !== undefined) {
+        throw new ValidationError('Sort field is required when sort order is provided');
+      }
+
+      if (sortBy !== undefined && sortOrder === undefined) {
+        throw new ValidationError('Sort order is required when sort field is provided');
+      }
+    } catch (error) {
+      
+    }
+  }
+
+  async getOrders(
+    pagination: PaginationOptions = {},
+    filters: OrderFilterOptions = {}
+  ): Promise<PaginatedResponse<Order>> {
+    try {
+      this.validatePaginationAndSorting(pagination, ['createdAt', 'updatedAt', 'totalAmount']);
+      const { page = 1, limit = 10, sortBy = 'createdAt', sortOrder = 'desc' } = pagination;
+
+      const skip = (page - 1) * limit;
+
+      const where: Prisma.OrderWhereInput = {};
+      if (filters.status) {
+        where.status = filters.status;
+      }
+      if (filters.type) {
+        where.type = filters.type;
+      }
+      if (filters.customerId) {
+        where.customerId = filters.customerId;
+      }
+      if (filters.tableId) {
+        where.tableId = filters.tableId;
+      }
+      const [data, total] = await prisma.$transaction([
+        prisma.order.findMany({
+          where, 
+          skip,
+          take: limit,
+          orderBy: { [sortBy]: sortOrder },
+          include: { items: true },
+        }),
+        prisma.order.count({ where }),
+      ])
+
+      const totalPages = Math.ceil(total / limit);
+
+      return {
+        data,
+        total,
+        page,
+        totalPages,
+        hasMore: page < totalPages,
+      }
+    } catch (error) {
+      logger.error('Error getting orders:', error);
+      return null as any;
+    }
+  }
 }

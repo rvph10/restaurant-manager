@@ -7,6 +7,7 @@ import {
   Product,
   StationType,
 } from '@prisma/client';
+import { FilterOptions } from './product.interface';
 
 export interface OrderDataInput {
   customerId?: string;
@@ -99,4 +100,15 @@ export interface ProductIngredient {
 export interface CachedProduct extends Product {
   ingredients: ProductIngredient[];
   category: Category;
+}
+
+export interface OrderFilterOptions extends FilterOptions {
+  status?: OrderStatus;
+  type?: OrderType;
+  customerId?: string;
+  tableId?: string;
+  createdAt?: {
+    from: Date;
+    to: Date;
+  };
 }
