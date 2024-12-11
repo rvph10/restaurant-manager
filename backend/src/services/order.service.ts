@@ -245,8 +245,8 @@ export class OrderService {
   }
 
   private sortStations(stations: StationDataInput[]): StationDataInput[] {
-    const independentStations = stations.filter(station => station.isIndependent);
-    const dependentStations = stations.filter(station => !station.isIndependent);
+    const independentStations = stations.filter((station) => station.isIndependent);
+    const dependentStations = stations.filter((station) => !station.isIndependent);
 
     const sortedDependentStations = dependentStations.sort((a, b) => {
       const orderA = a.stepOrder ?? Number.MAX_SAFE_INTEGER;
@@ -452,59 +452,61 @@ export class OrderService {
   async createOrder(data: OrderDataInput): Promise<Order> {
     try {
       this.validateOrderData(data);
-    await this.checkOrderTypeData(data);
-    const orderNumber = await this.createOrderNumber();
-    const workflowSteps = await this.createWorkflowSteps(data);
-    if (!data.totalAmount) {
-      data.totalAmount = await this.calculateTotalAmount(data.items);
-    }
-    // Wrap everything in a transaction
-    const order = await prisma.$transaction(async (tx) => {
-      // Create the order
-      const createdOrder = await tx.order.create({
-        data: {
-          orderNumber: orderNumber.toString(),
-          customerId: data.customerId || undefined,
-          orderName: data.orderName,
-          type: data.type,
-          status: OrderStatus.PENDING,
-          items: {
-            create: data.items.map((item) => ({
-              productId: item.productId,
-              quantity: item.quantity,
-              unitPrice: item.unitPrice || 0,
-              modifications: item.modifications,
-              extraPrice: item.extraPrice,
-              specialRequests: item.specialRequest || null,
-              status: item.status,
-            })),
+      await this.checkOrderTypeData(data);
+      const orderNumber = await this.createOrderNumber();
+      const workflowSteps = await this.createWorkflowSteps(data);
+      if (!data.totalAmount) {
+        data.totalAmount = await this.calculateTotalAmount(data.items);
+      }
+      // Wrap everything in a transaction
+      const order = await prisma.$transaction(async (tx) => {
+        // Create the order
+        const createdOrder = await tx.order.create({
+          data: {
+            orderNumber: orderNumber.toString(),
+            customerId: data.customerId || undefined,
+            orderName: data.orderName,
+            type: data.type,
+            status: OrderStatus.PENDING,
+            items: {
+              create: data.items.map((item) => ({
+                productId: item.productId,
+                quantity: item.quantity,
+                unitPrice: item.unitPrice || 0,
+                modifications: item.modifications,
+                extraPrice: item.extraPrice,
+                specialRequests: item.specialRequest || null,
+                status: item.status,
+              })),
+            },
+            totalAmount: data.totalAmount,
+            tax: data.tax || 0,
+            discount: data.discount,
+            deliveryFee: data.deliveryFee,
+            tableId: data.tableId,
+            notes: data.notes,
+            workflows: workflowSteps as any,
           },
-          totalAmount: data.totalAmount,
-          tax: data.tax || 0,
-          discount: data.discount,
-          deliveryFee: data.deliveryFee,
-          tableId: data.tableId,
-          notes: data.notes,
-          workflows: workflowSteps as any,
-        },
+        });
+        await this.updateIngredientStock(data.items);
+        if (data.customerId !== null) {
+        } // Update customer loyalty points + add order to customer history
+
+        return createdOrder;
       });
-      await this.updateIngredientStock(data.items);
-      if (data.customerId !== null) {
-      } // Update customer loyalty points + add order to customer history
 
-      return createdOrder;
-    });
+      auditLog(
+        'ORDER_CREATED',
+        {
+          orderId: order.id,
+          orderNumber: orderNumber,
+          customerId: order.customerId,
+          totalAmount: order.totalAmount,
+        },
+        data.user || 'SYSTEM'
+      );
 
-    auditLog('ORDER_CREATED', {
-      orderId: order.id,
-      orderNumber: orderNumber,
-      customerId: order.customerId,
-      totalAmount: order.totalAmount,
-    },
-    data.user || 'SYSTEM',
-    );
-
-    return order;
+      return order;
     } catch (error) {
       logger.error('Error creating order:', error);
       return null as any;
@@ -514,28 +516,28 @@ export class OrderService {
   async getOrder(id: string): Promise<Order | null> {
     try {
       const cacheKey = `order:${id}`;
-    const cached = await redisManager.get(cacheKey);
-    if (cached) {
-      logger.debug('Order cache hit', { orderId: id });
-      return cached;
-    }
+      const cached = await redisManager.get(cacheKey);
+      if (cached) {
+        logger.debug('Order cache hit', { orderId: id });
+        return cached;
+      }
 
-    const order = await prisma.order.findUnique({
-      where: { id },
-      include: {
-        items: true,
-      },
-    });
-    const cachedData = {
-      data: order,
-      metadata: {
-        cachedAt: new Date().toISOString,
-        expiresAt: new Date(Date.now() + 3600 * 1000).toISOString,
-      },
-    }
-    await redisManager.set(cacheKey, cachedData, 3600);
-    logger.debug('Order cached', { orderId: id });
-    return order;
+      const order = await prisma.order.findUnique({
+        where: { id },
+        include: {
+          items: true,
+        },
+      });
+      const cachedData = {
+        data: order,
+        metadata: {
+          cachedAt: new Date().toISOString,
+          expiresAt: new Date(Date.now() + 3600 * 1000).toISOString,
+        },
+      };
+      await redisManager.set(cacheKey, cachedData, 3600);
+      logger.debug('Order cached', { orderId: id });
+      return order;
     } catch (error) {
       logger.error('Error getting order:', error);
       return null;
@@ -545,7 +547,7 @@ export class OrderService {
   private validatePaginationAndSorting(
     pagination: PaginationOptions,
     allowedSortFields: string[]
-  ): void{
+  ): void {
     try {
       const { page, limit, sortBy, sortOrder } = pagination;
 
@@ -580,9 +582,7 @@ export class OrderService {
       if (sortBy !== undefined && sortOrder === undefined) {
         throw new ValidationError('Sort order is required when sort field is provided');
       }
-    } catch (error) {
-      
-    }
+    } catch (error) {}
   }
 
   async getOrders(
@@ -610,14 +610,14 @@ export class OrderService {
       }
       const [data, total] = await prisma.$transaction([
         prisma.order.findMany({
-          where, 
+          where,
           skip,
           take: limit,
           orderBy: { [sortBy]: sortOrder },
           include: { items: true },
         }),
         prisma.order.count({ where }),
-      ])
+      ]);
 
       const totalPages = Math.ceil(total / limit);
 
@@ -627,7 +627,7 @@ export class OrderService {
         page,
         totalPages,
         hasMore: page < totalPages,
-      }
+      };
     } catch (error) {
       logger.error('Error getting orders:', error);
       return null as any;
